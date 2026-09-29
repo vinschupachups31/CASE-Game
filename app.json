@@ -1,0 +1,1 @@
+{"expo":{"name":"CASE","slug":"case-game","scheme":"case","version":"0.1.0","orientation":"portrait","userInterfaceStyle":"dark","plugins":["expo-router","expo-location","expo-camera"],"experiments":{"typedRoutes":true}}}
