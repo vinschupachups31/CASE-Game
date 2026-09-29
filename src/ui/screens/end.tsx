@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { Platform, ScrollView, Share, Text, View } from 'react-native';
 import { chapterSummary, contradictionView } from '../../engine/gameEngine';
 import { investigatorProfile, nextUnlock, shareText } from '../../engine/profile';
 import { SuspectId } from '../../types/case';
@@ -32,14 +32,25 @@ export function ChapterEnd({ flow }: { flow: Flow }) {
     haptic.confirm();
   }, []);
 
+  const [copied, setCopied] = useState(false);
   async function share() {
+    const message = shareText(flow.run);
+    if (Platform.OS === 'web') {
+      // Web Share is often unavailable in a browser: copy the text instead.
+      try {
+        await navigator.clipboard.writeText(message);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2400);
+      } catch {}
+      return;
+    }
     try {
-      await Share.share({ message: shareText(flow.run) });
+      await Share.share({ message });
     } catch {}
   }
 
   return (
-    <Screen progress={1} footer={<PrimaryButton label="Partager mon code" onPress={share} />}>
+    <Screen progress={1} footer={<PrimaryButton label={copied ? 'Texte copié ✓' : 'Partager mon code'} onPress={share} />}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         <Reveal>
           <Eyebrow>Chapitre I · terminé</Eyebrow>

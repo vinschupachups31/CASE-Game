@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, View } from 'react-native';
+import { Animated, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -22,14 +22,21 @@ import { Interrogation, Ring, SarahMessages, Threat, Walk } from '../src/ui/scre
 
 const PROFILE_ORDER: Profile['id'][] = ['dense', 'small', 'rural'];
 
+// The hosted demo page embeds the fonts itself and sets this flag.
+const FONTS_INLINED = Platform.OS === 'web' && !!(globalThis as { __CASE_FONTS_INLINED__?: boolean }).__CASE_FONTS_INLINED__;
+
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    InstrumentSerif_400Regular,
-    InstrumentSerif_400Regular_Italic,
-    Inter_400Regular,
-    Inter_600SemiBold,
-    JetBrainsMono_400Regular,
-  });
+  const [fontsLoaded] = useFonts(
+    FONTS_INLINED
+      ? {}
+      : {
+          InstrumentSerif_400Regular,
+          InstrumentSerif_400Regular_Italic,
+          Inter_400Regular,
+          Inter_600SemiBold,
+          JetBrainsMono_400Regular,
+        },
+  );
 
   const [profileId, setProfileId] = useState<Profile['id']>('dense');
   const [run, setRun] = useState<RunState>(() => createRun());

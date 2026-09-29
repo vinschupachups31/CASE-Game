@@ -108,7 +108,7 @@ export function Dossier({ flow }: { flow: Flow }) {
           </View>
           <Spacer h={24} />
           {phase === 'idle' ? (
-            <Text style={[T.title, T.italic, { color: color.faint }]}>« Si quelqu’un écoute ça… »</Text>
+            <Text style={[T.title, T.italic, { color: color.faint }]}>{'«\u00A0Si quelqu’un écoute ça…\u00A0»'}</Text>
           ) : (
             <WordReveal text={`« ${voice} »`} style={[T.title, T.italic]} perWord={260} onDone={() => setPhase('done')} />
           )}

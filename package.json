@@ -2,14 +2,15 @@
   "name": "case-game",
   "version": "0.1.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo": "expo export --platform web && node scripts/build-demo.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/instrument-serif": "^0.4.1",
