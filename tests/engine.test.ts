@@ -206,3 +206,20 @@ describe('Simulateur — test fondamental de l’architecture', () => {
     expect(playthrough('dense', 'leo').run.accusation).toEqual({ suspectId: 'leo', correct: false });
   });
 });
+
+describe('Profil d’enquêteur et rendez-vous', () => {
+  it('le profil dépend de la façon de jouer', async () => {
+    const { investigatorProfile, shareText } = await import('../src/engine/profile');
+    expect(investigatorProfile(playthrough('dense').run).title).toBe('L’Œil');
+    expect(investigatorProfile(reduceGame(createRun(), { type: 'USE_FALLBACK', slot: 'WORLD_01' })).title).toBe('L’Improvisateur');
+    expect(shareText(playthrough('small').run)).toContain('Ma ville a écrit : 1874-U');
+  });
+
+  it('le chapitre suivant ouvre au prochain 07:42', async () => {
+    const { nextUnlock } = await import('../src/engine/profile');
+    const before = nextUnlock(new Date(2026, 8, 29, 6, 0));
+    expect([before.getDate(), before.getHours(), before.getMinutes()]).toEqual([29, 7, 42]);
+    const after = nextUnlock(new Date(2026, 8, 29, 22, 0));
+    expect([after.getDate(), after.getHours(), after.getMinutes()]).toEqual([30, 7, 42]);
+  });
+});

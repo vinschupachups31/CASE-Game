@@ -29,6 +29,8 @@ Le prototype inclut un mode de simulation (ville dense, petite ville, zone rural
 
 ## Architecture
 ```
+app/index.tsx                chef d’orchestre : polices, transitions, notifications
+src/ui/                      design system (theme, kit, motion, haptics, icons) + écrans
 src/
 ├── types/case.ts            Case File : vérité immuable (types)
 ├── types/run.ts             Run : état dynamique du joueur + événements
@@ -42,7 +44,10 @@ src/
     ├── interrogationEngine  réponses locales déterministes issues du Case File
     ├── characterEngine.ts   contexte borné pour une IA backend + garde-fou des réponses
     ├── notebook.ts          carnet : FAIT ÉTABLI vs HYPOTHÈSE
+    ├── profile.ts           profil d’enquêteur, texte de partage, rendez-vous 07:42
     └── simulator.ts         partie scriptée dans plusieurs environnements
 ```
 
 Test fondamental (`tests/engine.test.ts`) : la même affaire jouée en ville dense (`1927-A`), petite ville (`1874-U`) et zone rurale (fallbacks) produit des parcours et variables différents, et **Marc reste responsable** partout.
+
+Design system, moments clés et leviers de rétention : voir `docs/DESIGN.md`.
