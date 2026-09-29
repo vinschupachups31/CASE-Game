@@ -1,0 +1,2 @@
+import {CASE_2317} from '../cases/23-17';
+export function characterContext(id:'leo'|'sarah'|'marc',unlockedEvidence:string[]){const s=CASE_2317.suspects.find(x=>x.id===id)!;return{character:s.name,claim:s.claim,privateTruth:s.truth,allowedLies:s.lies,unlockedEvidence,rules:['Ne jamais changer la vérité criminelle','Ne jamais inventer un nouveau suspect','Ne révéler que les faits autorisés par les preuves','La formulation peut être improvisée, les faits non']}}
