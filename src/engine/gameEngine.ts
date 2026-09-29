@@ -1,0 +1,3 @@
+import {Run} from '../types/game';import {unlockEvidence,captureWorldVariable} from './worldEngine';
+export type GameEvent={type:'CAPTURE_YEAR';value:string}|{type:'CAPTURE_WORD';value:string}|{type:'UNLOCK';id:string}|{type:'NEXT_CHAPTER'};
+export function reduceGame(run:Run,event:GameEvent):Run{switch(event.type){case'CAPTURE_YEAR':return unlockEvidence(captureWorldVariable(run,'year',event.value),'e01');case'CAPTURE_WORD':return captureWorldVariable(run,'letter',event.value);case'UNLOCK':return unlockEvidence(run,event.id);case'NEXT_CHAPTER':return{...run,chapter:run.chapter+1}}}
