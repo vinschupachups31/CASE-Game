@@ -1,0 +1,208 @@
+import { describe, expect, it } from 'vitest';
+import { CASE_2317 } from '../src/cases/23-17';
+import { createRun, evidenceView, messageView, reduceGame, contradictionView, chapterSummary } from '../src/engine/gameEngine';
+import { playthrough, simulate } from '../src/engine/simulator';
+import { validateWord, validateYear } from '../src/engine/challengeEngine';
+import { ask } from '../src/engine/interrogationEngine';
+import { guardReply, characterContext } from '../src/engine/characterEngine';
+import { buildTerrain, compass } from '../src/engine/worldEngine';
+import { linkStatus } from '../src/engine/notebook';
+import { RunState } from '../src/types/run';
+
+function afterYear(year = '1927'): RunState {
+  let run = createRun('normal', 't');
+  run = reduceGame(run, { type: 'SET_FLAG', flag: 'ZONE_1_REACHED' });
+  return reduceGame(run, { type: 'CAPTURE', slot: 'WORLD_01', raw: year, source: 'camera' });
+}
+
+describe('Case File — vérité canonique', () => {
+  it('Marc est responsable', () => {
+    expect(CASE_2317.truth.culprit).toBe('marc');
+  });
+
+  it('est gelé : aucune mutation possible', () => {
+    expect(Object.isFrozen(CASE_2317)).toBe(true);
+    expect(Object.isFrozen(CASE_2317.truth)).toBe(true);
+    expect(() => {
+      (CASE_2317.truth as { culprit: string }).culprit = 'leo';
+    }).toThrow();
+  });
+
+  it('toutes les références internes existent', () => {
+    const facts = new Set(CASE_2317.truth.facts.map((f) => f.id));
+    for (const s of CASE_2317.suspects) for (const l of s.lies) expect(facts.has(l.hidesFactId)).toBe(true);
+    for (const t of CASE_2317.timeline) expect(facts.has(t.factId)).toBe(true);
+    const evidence = new Set(CASE_2317.evidence.map((e) => e.id));
+    for (const id of CASE_2317.accusation.requiredEvidence) expect(evidence.has(id)).toBe(true);
+  });
+});
+
+describe('Challenge Engine', () => {
+  it('valide une année plausible', () => {
+    expect(validateYear('1927')).toEqual({ ok: true, value: '1927', raw: '1927' });
+    expect(validateYear('927').ok).toBe(false);
+    expect(validateYear('3000').ok).toBe(false);
+  });
+
+  it('dérive la 3e lettre d’un mot de 6 lettres ou plus', () => {
+    expect(validateWord('PHARMACIE')).toMatchObject({ ok: true, value: 'A' });
+    expect(validateWord('Épicerie')).toMatchObject({ ok: true, value: 'I' });
+    expect(validateWord('CAFÉ').ok).toBe(false);
+  });
+});
+
+describe('Game Engine — progression', () => {
+  it('la capture de WORLD_01 n’est possible que dans la zone', () => {
+    const run = reduceGame(createRun('normal', 't'), { type: 'CAPTURE', slot: 'WORLD_01', raw: '1927', source: 'camera' });
+    expect(run.variables.WORLD_01).toBeUndefined();
+  });
+
+  it('WORLD_01 = 1927 débloque CALL_1927.dat et Léo', () => {
+    const run = afterYear();
+    expect(run.variables.WORLD_01?.value).toBe('1927');
+    expect(run.suspects).toEqual(['leo']);
+    expect(evidenceView(run)[0].fileName).toBe('CALL_1927.dat');
+  });
+
+  it('une valeur invalide ne change rien et une variable ne se réécrit pas', () => {
+    const run = afterYear();
+    expect(reduceGame(run, { type: 'CAPTURE', slot: 'WORLD_01', raw: '1874', source: 'camera' })).toBe(run);
+    expect(reduceGame(createRun(), { type: 'CAPTURE', slot: 'WORLD_01', raw: 'abc', source: 'camera' }).variables).toEqual({});
+  });
+
+  it('1927 + PHARMACIE → code 1927-A qui révèle Marc', () => {
+    const run = reduceGame(afterYear(), { type: 'CAPTURE', slot: 'WORLD_02', raw: 'PHARMACIE', source: 'camera' });
+    expect(run.suspects).toContain('marc');
+    expect(evidenceView(run).find((e) => e.id === 'e02')?.fileName).toBe('NORA_1927-A.doc');
+  });
+
+  it('le mensonge de Léo déclenche le message de Sarah et une contradiction potentielle', () => {
+    let run = afterYear();
+    for (const e of ask(run, 'leo', 'Où étiez-vous après ?').events) run = reduceGame(run, e);
+    expect(run.messages).toContain('sarah_01');
+    expect(run.suspects).toContain('sarah');
+    expect(run.contradictions).toContain('c_leo_home');
+  });
+
+  it('le message anonyme cite la valeur trouvée par le joueur', () => {
+    let run = reduceGame(afterYear('1874'), { type: 'CAPTURE', slot: 'WORLD_02', raw: 'BOULANGERIE', source: 'camera' });
+    run = reduceGame(run, { type: 'SET_FLAG', flag: 'WALKING_TO_ZONE_3' });
+    expect(messageView(run, 'threat_01')?.lines).toEqual(['Tu progresses vite.', '1874 était une mauvaise idée.']);
+    expect(run.messages).toContain('marc_01');
+  });
+
+  it('le chapitre I ne se termine pas trop tôt', () => {
+    const run = afterYear();
+    expect(reduceGame(run, { type: 'NEXT_CHAPTER' })).toBe(run);
+  });
+
+  it('une mission impossible a toujours un fallback', () => {
+    let run = reduceGame(createRun('normal', 't'), { type: 'USE_FALLBACK', slot: 'WORLD_01' });
+    run = reduceGame(run, { type: 'USE_FALLBACK', slot: 'WORLD_02' });
+    expect(run.variables.WORLD_01?.source).toBe('fallback');
+    expect(run.suspects).toEqual(expect.arrayContaining(['leo', 'marc']));
+  });
+
+  it('le reducer ne mute jamais l’état précédent', () => {
+    const run = afterYear();
+    const snapshot = JSON.stringify(run);
+    reduceGame(run, { type: 'CAPTURE', slot: 'WORLD_02', raw: 'PHARMACIE', source: 'camera' });
+    expect(JSON.stringify(run)).toBe(snapshot);
+  });
+});
+
+describe('Interrogation Engine', () => {
+  it('Marc esquive la question sur la valeur du joueur après la menace', () => {
+    let run = reduceGame(afterYear(), { type: 'CAPTURE', slot: 'WORLD_02', raw: 'PHARMACIE', source: 'camera' });
+    run = reduceGame(run, { type: 'SET_FLAG', flag: 'WALKING_TO_ZONE_3' });
+    const answer = ask(run, 'marc', 'Comment connaissez-vous 1927 ?');
+    expect(answer.topicId).toBe('marc_world01');
+    for (const e of answer.events) run = reduceGame(run, e);
+    expect(contradictionView(run).find((c) => c.id === 'c_marc_world01')?.label).toContain('1927');
+  });
+
+  it('choisit le sujet le plus précis (« où… après l’appel » ≠ « l’appel »)', () => {
+    const run = afterYear();
+    expect(ask(run, 'leo', 'Où étiez-vous après l’appel ?').topicId).toBe('leo_where');
+    expect(ask(run, 'leo', 'Nora vous a appelé à 21:53 ?').topicId).toBe('leo_call');
+  });
+
+  it('un suspect non débloqué ne répond pas', () => {
+    expect(ask(createRun(), 'marc', 'Vous connaissez Sarah ?').text).toBe('');
+  });
+
+  it('Sarah ment tant que la preuve e03 manque', () => {
+    let run = afterYear();
+    for (const e of ask(run, 'leo', 'Où étiez-vous ?').events) run = reduceGame(run, e);
+    expect(ask(run, 'sarah', 'Sur quel dossier travaillait Nora ?').topicId).toBe('sarah_lie');
+  });
+});
+
+describe('Character Engine — IA bornée', () => {
+  it('rejette un horaire inventé et un aveu de Marc', () => {
+    expect(guardReply('Je l’ai vue à 22:41.', 'leo')).toEqual({ ok: true });
+    expect(guardReply('Je suis parti à 23:05.', 'leo').ok).toBe(false);
+    expect(guardReply('D’accord… c’est moi.', 'marc').ok).toBe(false);
+  });
+
+  it('le contexte contient les mensonges, interdits et objectif', () => {
+    const ctx = characterContext(afterYear(), 'marc');
+    expect(ctx.objective).toMatch(/Léo/);
+    expect(ctx.lies).toHaveLength(2);
+    expect(ctx.playerEvidence[0]).toContain('CALL_1927.dat');
+  });
+});
+
+describe('World Engine', () => {
+  it('écarte les lieux privés ou dangereux', () => {
+    const t = simulate('dense');
+    expect(t.stops.every((s) => s.type !== 'place' || s.place.public)).toBe(true);
+    expect(t.stops.some((s) => s.type === 'place' && s.place.id === 'x')).toBe(false);
+  });
+
+  it('complète avec des challenges sur place quand les lieux manquent', () => {
+    const t = simulate('rural');
+    expect(t.stops).toHaveLength(4);
+    expect(t.stops.filter((s) => s.type === 'in_place')).toHaveLength(3);
+    expect(buildTerrain([], 'short').stops.every((s) => s.type === 'in_place')).toBe(true);
+  });
+
+  it('respecte la distance max du mode', () => {
+    expect(simulate('dense', 'short').zonesFound).toBe(3);
+    expect(compass(95)).toBe('E');
+  });
+});
+
+describe('Carnet', () => {
+  it('distingue fait établi et hypothèse', () => {
+    const run = afterYear();
+    expect(linkStatus(run, 'leo', 'nora')).toEqual({ status: 'FAIT ÉTABLI', label: 'Appel 21:53' });
+    expect(linkStatus(run, 'leo', 'marc').status).toBe('HYPOTHÈSE — PREUVES INSUFFISANTES');
+  });
+});
+
+describe('Simulateur — test fondamental de l’architecture', () => {
+  const dense = playthrough('dense');
+  const small = playthrough('small');
+  const rural = playthrough('rural');
+
+  it('les routes et les variables diffèrent', () => {
+    expect(dense.terrain.stops).not.toEqual(small.terrain.stops);
+    expect(dense.run.variables.WORLD_01?.value).toBe('1927');
+    expect(small.run.variables.WORLD_01?.value).toBe('1874');
+    expect(chapterSummary(dense.run).code).toBe('1927-A');
+    expect(chapterSummary(small.run).code).toBe('1874-U');
+  });
+
+  it('la vérité reste identique : Marc est responsable partout', () => {
+    for (const { run } of [dense, small, rural]) {
+      expect(run.chapter).toBe(2);
+      expect(run.contradictions).toContain('c_marc_sarah');
+      expect(run.accusation).toEqual({ suspectId: 'marc', correct: true });
+    }
+  });
+
+  it('accuser Léo est faux, même avec toutes les preuves', () => {
+    expect(playthrough('dense', 'leo').run.accusation).toEqual({ suspectId: 'leo', correct: false });
+  });
+});
