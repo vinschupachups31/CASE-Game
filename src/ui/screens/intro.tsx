@@ -58,7 +58,7 @@ export function Boot({ flow }: { flow: Flow }) {
 export function Dossier({ flow }: { flow: Flow }) {
   const [phase, setPhase] = useState<'idle' | 'playing' | 'done'>('idle');
   const voice = CASE_2317.opening.audio.join(' ');
-  const perWord = Math.round(estimateMs(voice, 'nora') / voice.split(' ').length);
+  const perWord = Math.round(estimateMs(voice) / voice.split(' ').length);
   useEffect(() => stopVoice, []);
   const play = () => {
     haptic.press();

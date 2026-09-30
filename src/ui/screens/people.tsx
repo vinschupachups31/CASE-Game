@@ -203,7 +203,7 @@ export function Interrogation({
           <>
             {current.q ? <Text style={T.caption}>Toi — {current.q}</Text> : <Text style={T.caption}>{s.name.split(' ')[0]}</Text>}
             <Spacer h={8} />
-            <WordReveal key={current.q + asked.length} text={current.a} style={T.title} perWord={Math.round(estimateMs(current.a, suspectId) / current.a.split(' ').length)} />
+            <WordReveal key={current.q + asked.length} text={current.a} style={T.title} perWord={Math.round(estimateMs(current.a) / current.a.split(' ').length)} />
           </>
         ) : (
           <Text style={[T.title, T.italic, { color: color.faint }]}>« Allô ? »</Text>
@@ -394,12 +394,7 @@ export function Threat({ flow, next }: { flow: Flow; next: Stage }) {
     return () => clearTimeout(t);
   }, []);
   const lines = started ? m?.lines ?? [] : [];
-  const { shown, typing } = useScript(lines, 2200);
-  // The unknown number speaks too: low, slow, almost a whisper.
-  useEffect(() => {
-    if (shown > 0) speak(lines[shown - 1], 'unknown');
-  }, [shown]);
-  useEffect(() => stopVoice, []);
+  const { shown, typing } = useScript(lines, 1500);
   const done = started && shown >= lines.length;
   const minutes = flow.capturedAt ? Math.max(1, Math.round((Date.now() - flow.capturedAt) / 60000)) : undefined;
 

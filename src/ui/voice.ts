@@ -1,39 +1,30 @@
-import * as Speech from 'expo-speech';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
+import { CLIPS } from '../voice/manifest';
+import { Speaker, lineIdFor } from '../voice/lines';
 
-// Character voices. Uses the device's French speech synthesis (expo-speech; Web Speech in a browser).
-// Each character gets its own pitch, pace and, when the device has several French voices, its own voice.
-// Recorded voice acting can replace this later without touching the screens.
+// Recorded character voices. A line without a recording stays silent: the subtitles carry it.
+// No synthetic device voice — it breaks the immersion.
 
-export type Speaker = 'nora' | 'leo' | 'sarah' | 'marc' | 'unknown';
-
-const PROFILE: Record<Speaker, { pitch: number; rate: number; slot: number }> = {
-  nora: { pitch: 1.08, rate: 0.9, slot: 0 },
-  sarah: { pitch: 1.18, rate: 1.04, slot: 1 },
-  leo: { pitch: 0.95, rate: 1.0, slot: 2 },
-  marc: { pitch: 0.72, rate: 0.88, slot: 3 },
-  unknown: { pitch: 0.5, rate: 0.78, slot: 3 },
-};
+export type { Speaker };
 
 let enabled = true;
-let frenchVoices: string[] | undefined;
+let current: AudioPlayer | undefined;
 const listeners = new Set<(on: boolean) => void>();
 
-async function loadVoices() {
-  if (frenchVoices) return frenchVoices;
-  try {
-    const all = await Speech.getAvailableVoicesAsync();
-    frenchVoices = all.filter((v) => v.language?.toLowerCase().startsWith('fr')).map((v) => v.identifier);
-  } catch {
-    frenchVoices = [];
-  }
-  return frenchVoices;
+/** Clips inlined by the hosted demo page (data URIs), else the bundled assets. */
+function sourceFor(id: string): string | number | undefined {
+  const inlined = (globalThis as { __CASE_VOICES__?: Record<string, string> }).__CASE_VOICES__;
+  return inlined?.[id] ?? CLIPS[id];
 }
-loadVoices();
 
-/** Approximate spoken duration, used to pace subtitles and as a safety net when no voice is available. */
-export function estimateMs(text: string, who: Speaker): number {
-  const words = text.split(/\s+/).filter(Boolean).length;
-  return Math.round((words * 390) / PROFILE[who].rate) + 300;
+export function hasRecording(speaker: Speaker, text: string): boolean {
+  const id = lineIdFor(speaker, text);
+  return !!id && sourceFor(id) !== undefined;
+}
+
+/** Reading pace for subtitles, and the safety net for the end of a clip. */
+export function estimateMs(text: string): number {
+  return text.split(/\s+/).filter(Boolean).length * 380 + 300;
 }
 
 export function isVoiceOn() {
@@ -42,7 +33,7 @@ export function isVoiceOn() {
 
 export function setVoiceOn(on: boolean) {
   enabled = on;
-  if (!on) Speech.stop();
+  if (!on) stopVoice();
   listeners.forEach((l) => l(on));
 }
 
@@ -53,8 +44,16 @@ export function onVoiceChange(l: (on: boolean) => void) {
   };
 }
 
-/** Speaks a line; `onDone` fires exactly once, when the line ends or would have ended. */
-export function speak(text: string, who: Speaker, onDone?: () => void) {
+export function stopVoice() {
+  try {
+    current?.pause();
+    current?.remove();
+  } catch {}
+  current = undefined;
+}
+
+/** Plays a character's line; `onDone` fires exactly once, when it ends (or would have been read). */
+export function speak(text: string, speaker: Speaker, onDone?: () => void) {
   let finished = false;
   const done = () => {
     if (finished) return;
@@ -62,30 +61,20 @@ export function speak(text: string, who: Speaker, onDone?: () => void) {
     clearTimeout(safety);
     onDone?.();
   };
-  const expected = estimateMs(text, who);
-  // Some browsers never report the end of speech (or have no French voice): never block the story on it.
-  const safety = setTimeout(done, enabled ? expected * 1.8 + 1500 : expected);
-  if (!enabled) return;
-
-  const p = PROFILE[who];
-  const voices = frenchVoices ?? [];
+  const id = lineIdFor(speaker, text);
+  const source = id ? sourceFor(id) : undefined;
+  stopVoice();
+  const expected = estimateMs(text);
+  const safety = setTimeout(done, source !== undefined && enabled ? expected * 2 + 2000 : expected);
+  if (source === undefined || !enabled) return;
   try {
-    Speech.stop();
-    Speech.speak(text, {
-      language: 'fr-FR',
-      voice: voices.length ? voices[p.slot % voices.length] : undefined,
-      pitch: p.pitch,
-      rate: p.rate,
-      onDone: done,
-      onError: done,
+    const player = createAudioPlayer(source);
+    current = player;
+    player.addListener('playbackStatusUpdate', (s) => {
+      if (s.didJustFinish) done();
     });
+    player.play();
   } catch {
-    // No speech engine: the subtitles still carry the line.
+    // Playback refused (e.g. before any tap on the web): the subtitles still carry the line.
   }
-}
-
-export function stopVoice() {
-  try {
-    Speech.stop();
-  } catch {}
 }

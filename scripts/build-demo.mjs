@@ -1,7 +1,7 @@
 // Builds a single self-contained HTML page of the web build (fonts and JS inlined),
 // for sharing a playable demo link. Run after `npx expo export --platform web`.
 // Usage: node scripts/build-demo.mjs [output.html]
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const out = process.argv[2] ?? 'dist-demo/case-demo.html';
@@ -22,6 +22,16 @@ const faces = Object.entries(fonts)
   })
   .join('\n');
 
+// Recorded voices, inlined as data URIs (the hosted page cannot load separate media files).
+const voiceDir = 'assets/voices';
+const voices = existsSync(voiceDir)
+  ? Object.fromEntries(
+      readdirSync(voiceDir)
+        .filter((f) => f.endsWith('.mp3'))
+        .map((f) => [f.slice(0, -4), `data:audio/mpeg;base64,${readFileSync(`${voiceDir}/${f}`).toString('base64')}`]),
+    )
+  : {};
+
 const html = `<title>CASE 23:17</title>
 <style>
 /* Single dark look, like the app: near-black ground, warm white ink. */
@@ -31,10 +41,10 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);overflow:hi
 ${faces}
 </style>
 <div id="root"></div>
-<script>window.__CASE_FONTS_INLINED__=true;</script>
+<script>window.__CASE_FONTS_INLINED__=true;window.__CASE_VOICES__=${JSON.stringify(voices)};</script>
 <script>${bundle}</script>
 `;
 
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, html);
-console.log(`${out} — ${(html.length / 1024 / 1024).toFixed(2)} MB`);
+console.log(`${out} — ${(html.length / 1024 / 1024).toFixed(2)} MB, ${Object.keys(voices).length} voix`);
