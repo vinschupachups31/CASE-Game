@@ -13,7 +13,7 @@ La vérité criminelle est immuable. Le World Engine adapte les lieux et certain
 - challenge environnemental
 - preuves
 - suspects
-- interrogatoire contrôlé
+- interrogatoire contrôlé (voix des personnages via expo-speech)
 - contradiction
 - accusation
 
