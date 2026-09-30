@@ -9,6 +9,17 @@ Référence : skill `.claude/skills/mobile-app-ui-design` (règles 60/30/10, gri
 - **Espacements** : multiples de 8 (4 toléré). Marges latérales de 24.
 - **Mouvement** : courbe expo-out `(0.16, 1, 0.3, 1)`, entrées décalées (Reveal), transitions en fondu au noir entre écrans.
 
+## Couche de mouvement (`src/ui/fx.tsx`, Reanimated 4)
+Tout tourne sur le fil d'interface, à la fréquence de l'écran, et se fige si le téléphone demande de réduire les animations.
+- **Ambiance** : grain de film animé, deux halos qui dérivent lentement, vignettage. L'ambiance suit l'histoire : sombre pendant les appels et au viseur, rouge dans les moments de tension (numéro inconnu, Marc, accusation).
+- **Transitions** : fondu avec profondeur par défaut ; coupe franche avec flash rouge pour ce qui doit surprendre (numéro inconnu, appel de Marc, SMS anonyme) ; flash blanc pour une découverte (preuves, détection) ; lent pour les fins.
+- **Titres** : lignes qui montent derrière un masque, comme un générique.
+- **Données** : heures, codes et fichiers se déchiffrent (caractères aléatoires qui se fixent de gauche à droite).
+- **Cartes** : inclinaison 3D avec le gyroscope (la souris sur le web) et reflet qui glisse.
+- **Boutons** : reflet qui balaie, rebond à l'appui. L'accusation se confirme par **appui long** : la jauge rouge se remplit, les vibrations s'accélèrent.
+- **Portraits** : un nouveau détail se développe comme un Polaroid (flash puis rebond) ; halo qui respire pendant qu'on parle ou qu'on sonne.
+- **Notifications** : verre dépoli, arrivée en ressort.
+
 ## Principes appliqués
 - Un écran = une action principale, toujours en bas, à portée du pouce (bouton de 64 pt).
 - Le téléphone s’efface pendant la marche : écran « Range ton téléphone », vibration à l’arrivée.

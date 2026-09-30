@@ -1,4 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { BlurView } from 'expo-blur';
+import { Glint } from './fx';
 import { Animated, Pressable, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { haptic } from './haptics';
@@ -54,7 +56,7 @@ export function Screen({
   const insets = useSafeAreaInsets();
   const current = React.useContext(ChapterContext);
   return (
-    <View style={[{ flex: 1, backgroundColor: color.bg, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }, style]}>
+    <View style={[{ flex: 1, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }, style]}>
       {!bare && <TopBar progress={progress} chapter={chapter ?? current} />}
       <View style={{ flex: 1, paddingHorizontal: space.gutter, overflow: 'hidden' }}>{children}</View>
       {footer && <View style={{ paddingHorizontal: space.gutter, paddingTop: 16, gap: 8 }}>{footer}</View>}
@@ -73,9 +75,26 @@ export function TopBar({ progress = 0, chapter }: { progress?: number; chapter: 
         <Text style={[T.label, { color: color.ink, letterSpacing: 6 }]}>CASE</Text>
         <Text style={T.mono}>23:17 · CH. {chapter}</Text>
       </View>
-      <View style={{ height: 2, backgroundColor: color.line, marginTop: 16, borderRadius: 1, overflow: 'hidden' }}>
+      <View style={{ height: 2, backgroundColor: color.line, marginTop: 16, borderRadius: 1 }}>
         <Animated.View
-          style={{ height: 2, backgroundColor: color.ink, width: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }}
+          style={{ height: 2, borderRadius: 1, backgroundColor: color.ink, width: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }}
+        />
+        {/* The head of the bar glows: where the story is now. */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: -2,
+            marginLeft: -3,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: color.ink,
+            shadowColor: color.ink,
+            shadowOpacity: 0.9,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 0 },
+            left: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+          }}
         />
       </View>
     </View>
@@ -92,13 +111,14 @@ export const Hairline = ({ style }: { style?: StyleProp<ViewStyle> }) => (
 
 function usePressScale() {
   const scale = useRef(new Animated.Value(1)).current;
-  const to = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: motion.native, speed: 40, bounciness: 0 }).start();
-  return { scale, onPressIn: () => to(0.975), onPressOut: () => to(1) };
+  const to = (v: number, bounciness: number) => Animated.spring(scale, { toValue: v, useNativeDriver: motion.native, speed: 32, bounciness }).start();
+  return { scale, onPressIn: () => to(0.955, 0), onPressOut: () => to(1, 12) };
 }
 
 /** The one big thumb-reachable action. */
 export function PrimaryButton({ label, onPress, disabled, tone = 'ink' }: { label: string; onPress: () => void; disabled?: boolean; tone?: 'ink' | 'red' }) {
   const p = usePressScale();
+  const [w, setW] = useState(0);
   const bg = tone === 'red' ? color.red : color.ink;
   return (
     <Pressable
@@ -112,6 +132,7 @@ export function PrimaryButton({ label, onPress, disabled, tone = 'ink' }: { labe
       }}
     >
       <Animated.View
+        onLayout={(e) => setW(e.nativeEvent.layout.width)}
         style={{
           height: 64,
           borderRadius: radius.m,
@@ -119,17 +140,67 @@ export function PrimaryButton({ label, onPress, disabled, tone = 'ink' }: { labe
           borderTopWidth: 1,
           borderTopColor: 'rgba(255,255,255,0.35)',
           shadowColor: bg,
-          shadowOpacity: disabled ? 0 : 0.25,
-          shadowRadius: 24,
-          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: disabled ? 0 : 0.35,
+          shadowRadius: 32,
+          shadowOffset: { width: 0, height: 10 },
           alignItems: 'center',
           justifyContent: 'center',
+          overflow: 'hidden',
           opacity: disabled ? 0.28 : 1,
           transform: [{ scale: p.scale }],
         }}
       >
-        <Text style={[T.bodyStrong, { color: tone === 'red' ? color.ink : color.bg }]}>{label}</Text>
+        {!disabled && w > 0 && <Glint width={w} tint={tone === 'red' ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.8)'} />}
+        <Text key={label} style={[T.bodyStrong, { color: tone === 'red' ? color.ink : color.bg }]}>
+          {label}
+        </Text>
       </Animated.View>
+    </Pressable>
+  );
+}
+
+/**
+ * Hold to confirm, for what cannot be undone (the accusation). The fill follows the thumb,
+ * haptics tighten as it fills; releasing early drains it back.
+ */
+export function HoldButton({ label, onConfirm, disabled, duration = 1400 }: { label: string; onConfirm: () => void; disabled?: boolean; duration?: number }) {
+  const fill = useRef(new Animated.Value(0)).current;
+  const ticks = useRef<ReturnType<typeof setInterval>>(undefined);
+  const [w, setW] = useState(0);
+  const done = useRef(false);
+
+  function press() {
+    if (disabled || done.current) return;
+    haptic.press();
+    let n = 0;
+    ticks.current = setInterval(() => {
+      n += 1;
+      n % 2 ? haptic.tap() : haptic.press();
+    }, 140);
+    Animated.timing(fill, { toValue: 1, duration, easing: motion.easeInOut, useNativeDriver: false }).start(({ finished }) => {
+      clearInterval(ticks.current);
+      if (!finished) return;
+      done.current = true;
+      haptic.alarm();
+      onConfirm();
+    });
+  }
+  function release() {
+    clearInterval(ticks.current);
+    if (done.current) return;
+    Animated.timing(fill, { toValue: 0, duration: 320, easing: motion.ease, useNativeDriver: false }).start();
+  }
+  useEffect(() => () => clearInterval(ticks.current), []);
+
+  return (
+    <Pressable accessibilityRole="button" accessibilityHint="Maintenir pour confirmer" disabled={disabled} onPressIn={press} onPressOut={release}>
+      <View
+        onLayout={(e) => setW(e.nativeEvent.layout.width)}
+        style={{ height: 64, borderRadius: radius.m, borderWidth: 1, borderColor: color.redLine, backgroundColor: color.redSoft, overflow: 'hidden', justifyContent: 'center', opacity: disabled ? 0.28 : 1 }}
+      >
+        <Animated.View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: color.red, width: fill.interpolate({ inputRange: [0, 1], outputRange: [0, w] }) }} />
+        <Text style={[T.bodyStrong, { textAlign: 'center', color: color.ink }]}>{label}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -229,7 +300,7 @@ export function Toast({ text, kind, onHide, leading }: { text: string; kind: Toa
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.sequence([
-      Animated.timing(v, { toValue: 1, duration: 420, easing: motion.ease, useNativeDriver: motion.native }),
+      Animated.spring(v, { toValue: 1, useNativeDriver: motion.native, speed: 14, bounciness: 9 }),
       Animated.delay(2200),
       Animated.timing(v, { toValue: 0, duration: 320, easing: motion.easeInOut, useNativeDriver: motion.native }),
     ]).start(onHide);
@@ -245,16 +316,19 @@ export function Toast({ text, kind, onHide, leading }: { text: string; kind: Toa
         borderRadius: radius.m,
         paddingVertical: 16,
         paddingHorizontal: 16,
-        backgroundColor: kind === 'alert' ? '#1A0D0E' : color.surfaceHi,
+        backgroundColor: kind === 'alert' ? 'rgba(40,12,14,0.55)' : 'rgba(26,30,34,0.55)',
+        overflow: 'hidden',
         borderWidth: 1,
         borderColor: kind === 'alert' ? color.redLine : color.lineHi,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
         opacity: v,
-        transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }],
+        transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-64, 0] }) }, { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
       }}
     >
+      {/* Frosted glass: the story stays visible behind the notice. */}
+      <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
       {leading ?? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: kind === 'alert' ? color.red : color.ink }} />}
       <Text style={[T.label, { color: kind === 'alert' ? color.red : color.ink, flex: 1 }]}>
         {text}

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, View } from 'react-native';
+import { Platform, View } from 'react-native';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import { Ambient, Flash, Mood, ease, easeInOut } from '../src/ui/fx';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -56,7 +58,14 @@ export default function App() {
   const toast = toasts[0];
 
   const terrain = useMemo(() => simulate(profileId, run.mode), [profileId, run.mode]);
-  const fade = useRef(new Animated.Value(1)).current;
+  // Scene transitions: a soft dissolve with depth by default, a hard cut for what should startle.
+  const reduced = useReducedMotion();
+  const scene = useSharedValue(1);
+  const [cut, setCut] = useState<{ n: number; tint: string }>({ n: 0, tint: color.ink });
+  const sceneStyle = useAnimatedStyle(() => ({
+    opacity: scene.value,
+    transform: [{ scale: 0.985 + scene.value * 0.015 }, { translateY: (1 - scene.value) * 10 }],
+  }));
 
   // Feedback on what the engine just learned: contradictions, portrait details, statements.
   const prev = useRef(run);
@@ -78,11 +87,22 @@ export default function App() {
     setToasts((q) => [...q, ...notices]);
   }, [run]);
 
-  function go(next: Stage) {
-    Animated.timing(fade, { toValue: 0, duration: 180, easing: motion.easeInOut, useNativeDriver: motion.native }).start(() => {
-      setStage(resolveStage(next, run.mode));
-      Animated.timing(fade, { toValue: 1, duration: 420, easing: motion.ease, useNativeDriver: motion.native }).start();
-    });
+  function go(target: Stage) {
+    const next = resolveStage(target, run.mode);
+    const kind = TRANSITION[next] ?? 'dissolve';
+    if (reduced) return setStage(next);
+    if (kind === 'cut') {
+      setStage(next);
+      setCut((c) => ({ n: c.n + 1, tint: next === 'threat' || next === 'ringMarc' ? color.red : color.ink }));
+      scene.value = withSequence(withTiming(0.2, { duration: 0 }), withTiming(1, { duration: 360, easing: ease }));
+      return;
+    }
+    scene.value = withTiming(0, { duration: 200, easing: easeInOut });
+    setTimeout(() => {
+      setStage(next);
+      if (kind === 'flash') setCut((c) => ({ n: c.n + 1, tint: color.ink }));
+      scene.value = withTiming(1, { duration: kind === 'slow' ? 1100 : 560, easing: ease });
+    }, 210);
   }
 
   const flow: Flow = {
@@ -113,7 +133,8 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <View style={{ flex: 1, backgroundColor: color.black, alignItems: 'center' }}>
-        <Animated.View style={{ flex: 1, width: '100%', maxWidth: 480, opacity: fade }}>
+        <Ambient mood={MOOD[stage] ?? 'calm'} />
+        <Animated.View style={[{ flex: 1, width: '100%', maxWidth: 480 }, sceneStyle]}>
           <ChapterContext.Provider value={ROMAN[chapterOf(stage)]}>
             <StageView flow={flow} />
           </ChapterContext.Provider>
@@ -125,6 +146,7 @@ export default function App() {
           </Text>
           <VoiceSwitch />
         </View>
+        <Flash trigger={cut.n} tint={cut.tint} peak={cut.tint === color.red ? 0.45 : 0.18} />
         {toast && (
           <Toast
             key={toast.id}
@@ -138,6 +160,45 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+/** The light of each moment: tense stages turn the frame red, calls and the viewfinder go dark. */
+const MOOD: Partial<Record<Stage, Mood>> = {
+  boot: 'dark',
+  pocket1: 'dark',
+  capture1: 'dark',
+  detect1: 'dark',
+  capture2: 'dark',
+  detect2: 'dark',
+  capture3: 'dark',
+  detect3: 'dark',
+  ringLeo: 'dark',
+  ringSarah: 'dark',
+  ringMarc2: 'dark',
+  leadLeo: 'dark',
+  threat: 'tense',
+  ringMarc: 'tense',
+  callMarc: 'tense',
+  callMarc2: 'tense',
+  leadSarah: 'tense',
+  accuse: 'tense',
+};
+
+/** How each stage enters: a cut startles, a flash marks a discovery, slow lets an ending breathe. */
+const TRANSITION: Partial<Record<Stage, 'cut' | 'flash' | 'slow'>> = {
+  threat: 'cut',
+  ringMarc: 'cut',
+  leadLeo: 'cut',
+  detect1: 'flash',
+  detect2: 'flash',
+  detect3: 'flash',
+  evidence1: 'flash',
+  evidence2: 'flash',
+  evidence3: 'flash',
+  evidence5: 'flash',
+  end: 'slow',
+  verdict: 'slow',
+  chapter2: 'slow',
+};
 
 function StageView({ flow }: { flow: Flow }) {
   const word = CASE_2317.worldSlots[1];

@@ -6,7 +6,8 @@ import { verdictShareText } from '../../engine/profile';
 import { SuspectId } from '../../types/case';
 import { Flow, SUSPECT_SHORT, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
-import { Eyebrow, Flex, GhostButton, Hairline, PrimaryButton, Screen, Spacer, T } from '../kit';
+import { Eyebrow, Flex, GhostButton, Hairline, HoldButton, PrimaryButton, Screen, Spacer, T } from '../kit';
+import { Halo, MaskReveal, Scramble } from '../fx';
 import { Reveal, WordReveal } from '../motion';
 import { Portrait, partsFor } from '../portraits';
 import { color, radius } from '../theme';
@@ -30,7 +31,6 @@ export function Accuse({ flow, next }: { flow: Flow; next: Stage }) {
 
   function accuse() {
     if (!suspect || !proof) return;
-    haptic.alarm();
     flow.apply({ type: 'ACCUSE', suspectId: suspect, contradictionId: proof });
     flow.go(next);
   }
@@ -40,7 +40,7 @@ export function Accuse({ flow, next }: { flow: Flow; next: Stage }) {
   return (
     <Screen
       progress={progressOf(flow.stage)}
-      footer={<PrimaryButton tone="red" label={suspect ? `Accuser ${SUSPECT_SHORT[suspect]}` : 'Choisis une personne'} disabled={!suspect || !proof} onPress={accuse} />}
+      footer={<HoldButton label={suspect ? `Maintenir pour accuser ${SUSPECT_SHORT[suspect]}` : 'Choisis une personne'} disabled={!suspect || !proof} onConfirm={accuse} />}
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
         <Reveal>
@@ -181,16 +181,18 @@ export function Verdict({ flow }: { flow: Flow }) {
         </Reveal>
         <Spacer h={16} />
         <Reveal delay={100}>
-          <Portrait id={v.accused.id} size={96} ring={v.outcome === 'sound' ? color.ink : color.red} />
+          <View style={{ width: 96, height: 96, alignItems: 'center', justifyContent: 'center' }}>
+            <Halo size={260} tint={v.outcome === 'sound' ? color.ink : color.red} strength={0.2} />
+            <Portrait id={v.accused.id} size={96} ring={v.outcome === 'sound' ? color.ink : color.red} />
+          </View>
           <Spacer h={16} />
         </Reveal>
-        <Reveal delay={200}>
-          <Text style={T.display}>
-            {first} {last}
-            {'\n'}
-            <Text style={[T.italic, v.outcome !== 'sound' && { color: color.red }]}>{h.title}</Text>
-          </Text>
-        </Reveal>
+        <MaskReveal
+          style={T.display}
+          delay={400}
+          stagger={180}
+          lines={[`${first} ${last}`, <Text style={[T.italic, v.outcome !== 'sound' && { color: color.red }]}>{h.title}</Text>]}
+        />
         <Spacer h={24} />
         <Reveal delay={700}>
           {v.outcome === 'sound' && proof && (
@@ -225,7 +227,7 @@ export function Verdict({ flow }: { flow: Flow }) {
               <View key={e.time}>
                 {i > 0 && <Hairline />}
                 <View style={{ flexDirection: 'row', gap: 16, padding: 16 }}>
-                  <Text style={[T.monoL, { color: e.time === '23:17' ? color.red : color.ink }]}>{e.time}</Text>
+                  <Scramble text={e.time} delay={1300 + i * 250} style={[T.monoL, { color: e.time === '23:17' ? color.red : color.ink }]} />
                   <Text style={[T.body, { flex: 1 }]}>{e.text}</Text>
                 </View>
               </View>

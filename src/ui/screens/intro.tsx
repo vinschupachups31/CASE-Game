@@ -5,6 +5,7 @@ import { MODES, RouteStop } from '../../engine/worldEngine';
 import { modeScope } from '../../engine/modes';
 import { RunMode } from '../../types/run';
 import { Portrait } from '../portraits';
+import { Halo, MaskReveal, Scramble, Tilt } from '../fx';
 import { Flow } from '../flow';
 import { haptic } from '../haptics';
 import { PlayIcon, ShieldIcon } from '../icons';
@@ -30,8 +31,14 @@ export function Boot({ flow }: { flow: Flow }) {
       }
     >
       <Flex />
-      <Reveal delay={700} from={-24}>
-        <View style={{ backgroundColor: color.surface, borderRadius: radius.l, padding: 16, borderWidth: 1, borderColor: color.line }}>
+      <View style={{ alignItems: 'center' }}>
+        <Halo size={420} tint={color.red} strength={0.14} period={2600} />
+        <Scramble text={CASE_2317.title} delay={300} duration={1100} style={[T.display, { fontFamily: T.monoL.fontFamily, fontSize: 72, lineHeight: 80, letterSpacing: -2, color: color.ink }]} />
+      </View>
+      <Spacer h={40} />
+      <Reveal delay={1300} from={-24}>
+        <Tilt radius={radius.l}>
+        <View style={{ backgroundColor: 'rgba(19,22,25,0.7)', borderRadius: radius.l, padding: 16, borderWidth: 1, borderColor: color.lineHi }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={{ width: 24, height: 24, borderRadius: 8, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={[T.label, { color: color.bg, letterSpacing: 0 }]}>C</Text>
@@ -43,13 +50,10 @@ export function Boot({ flow }: { flow: Flow }) {
           <Text style={T.bodyStrong}>Dossier reçu</Text>
           <Text style={T.body}>Une affaire t’a été assignée. Ouvre-la seul.</Text>
         </View>
+        </Tilt>
       </Reveal>
-      <Spacer h={48} />
-      <Reveal delay={1500}>
-        <Text style={[T.mono, { textAlign: 'center' }]}>
-          {CASE_2317.opening.date.toUpperCase()} · {CASE_2317.opening.time}
-        </Text>
-      </Reveal>
+      <Spacer h={32} />
+      <Scramble text={`${CASE_2317.opening.date.toUpperCase()} · ${CASE_2317.opening.time}`} delay={1900} style={[T.mono, { textAlign: 'center' }]} />
       <Flex />
     </Screen>
   );
@@ -86,18 +90,16 @@ export function Dossier({ flow }: { flow: Flow }) {
       <Spacer h={16} />
       <Reveal delay={120}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={T.display}>
-            Nora{'\n'}
-            <Text style={T.italic}>Valen.</Text>
-          </Text>
-          <Portrait id="nora" size={104} ring={color.redLine} />
+          <MaskReveal style={T.display} lines={['Nora', <Text style={T.italic}>Valen.</Text>]} delay={150} />
+          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <Halo size={200} tint={color.red} strength={0.2} />
+            <Portrait id="nora" size={104} ring={color.redLine} />
+          </View>
         </View>
       </Reveal>
       <Spacer h={16} />
       <Reveal delay={240}>
-        <Text style={T.mono}>
-          {CASE_2317.victim.age} ANS · {CASE_2317.victim.occupation.toUpperCase()} · DERNIER SIGNAL 23:17
-        </Text>
+        <Scramble text={`${CASE_2317.victim.age} ANS · ${CASE_2317.victim.occupation.toUpperCase()} · DERNIER SIGNAL 23:17`} delay={500} duration={900} style={T.mono} />
       </Reveal>
       <Spacer h={32} />
       <Reveal delay={400}>

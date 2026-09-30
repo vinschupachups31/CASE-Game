@@ -9,6 +9,7 @@ import { Flow, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
 import { PhoneIcon } from '../icons';
 import { Portrait, partsFor } from '../portraits';
+import { Halo, MaskReveal } from '../fx';
 import { reachableTraits, revealedTraits } from '../../engine/appearance';
 import { Chip, Eyebrow, Flex, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Glitch, Pulse, Reveal, Typing, Waveform, WordReveal } from '../motion';
@@ -31,7 +32,7 @@ export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectI
     };
   }, []);
   return (
-    <Screen bare style={{ backgroundColor: color.black }}>
+    <Screen bare>
       <Spacer h={48} />
       <Reveal>
         <View style={{ alignItems: 'center' }}>
@@ -41,12 +42,13 @@ export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectI
       <Flex />
       <View style={{ alignItems: 'center' }}>
         <View style={{ width: 240, height: 240, alignItems: 'center', justifyContent: 'center' }}>
+          <Halo size={320} tint={incoming ? color.red : color.ink} strength={incoming ? 0.28 : 0.14} period={1400} />
           <Pulse size={240} tint={incoming ? color.red : color.ink} period={1800} />
           <Portrait id={s.id} size={128} parts={partsFor(flow.run, s.id)} />
         </View>
         <Spacer h={24} />
-        <Text style={[T.display, { textAlign: 'center' }]}>{s.name.split(' ')[0]}</Text>
-        <Text style={[T.title, T.italic, { textAlign: 'center', color: color.muted }]}>{s.name.split(' ').slice(1).join(' ')}</Text>
+        <MaskReveal align="center" style={[T.display, { textAlign: 'center' }]} lines={[s.name.split(' ')[0]]} delay={200} />
+        <MaskReveal align="center" style={[T.title, T.italic, { textAlign: 'center', color: color.muted }]} lines={[s.name.split(' ').slice(1).join(' ')]} delay={320} />
         <Spacer h={8} />
         <Text style={T.caption}>{declined ? 'Il insiste.' : s.role}</Text>
         <Spacer h={16} />
@@ -243,7 +245,10 @@ export function Interrogation({
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Portrait id={s.id} size={48} parts={partsFor(flow.run, s.id)} ring={call.hungUp ? color.red : color.lineHi} />
+        <View style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
+          {speaking && <Halo size={120} tint={tense ? color.red : color.ink} strength={0.22} period={700} />}
+          <Portrait id={s.id} size={48} parts={partsFor(flow.run, s.id)} ring={call.hungUp ? color.red : color.lineHi} />
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={T.bodyStrong}>{s.name}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -454,12 +459,7 @@ export function Walk({ flow, next }: { flow: Flow; next: Stage }) {
     <Screen progress={progressOf(flow.stage)}>
       <Eyebrow>Mission 03 · Confrontation</Eyebrow>
       <Flex />
-      <Reveal>
-        <Text style={T.display}>
-          Continue{'\n'}
-          <Text style={T.italic}>à marcher.</Text>
-        </Text>
-      </Reveal>
+      <MaskReveal style={T.display} lines={['Continue', <Text style={T.italic}>à marcher.</Text>]} />
       <Spacer h={24} />
       <Reveal delay={300}>
         <Text style={T.body}>{stop.type === 'place' ? `Prochain point : ${stop.place.name.toLowerCase()}, ${stop.place.distanceM} m.` : 'Reste où tu es. Écoute.'}</Text>
@@ -493,7 +493,7 @@ export function Threat({ flow, next }: { flow: Flow; next: Stage }) {
   }, [done]);
 
   return (
-    <Screen bare style={{ backgroundColor: color.black }}>
+    <Screen bare>
       {started && (
         <View style={{ alignItems: 'center', marginTop: 32 }}>
           <Portrait id="unknown" size={64} ring={color.redLine} />

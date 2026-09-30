@@ -7,6 +7,7 @@ import { Flow, SUSPECT_SHORT } from '../flow';
 import { haptic } from '../haptics';
 import { Chip, Eyebrow, GhostButton, Hairline, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Counter, Reveal, WordReveal } from '../motion';
+import { Scramble, Tilt } from '../fx';
 import { color, radius } from '../theme';
 
 function useCountdown(target: Date) {
@@ -57,17 +58,19 @@ export function ChapterEnd({ flow }: { flow: Flow }) {
         </Reveal>
         <Spacer h={16} />
         <Reveal delay={150}>
-          <View style={{ borderRadius: radius.l, padding: 24, backgroundColor: color.surface, borderWidth: 1, borderColor: color.line, overflow: 'hidden' }}>
+          <Tilt radius={radius.l}>
+          <View style={{ borderRadius: radius.l, padding: 24, backgroundColor: 'rgba(19,22,25,0.8)', borderWidth: 1, borderColor: color.lineHi, overflow: 'hidden' }}>
             <View style={{ position: 'absolute', right: -40, top: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: color.redSoft }} />
             <Text style={T.label}>Ta ville a écrit</Text>
             <Spacer h={8} />
-            <Text style={[T.display, { letterSpacing: 2 }]}>{summary.code}</Text>
+            <Scramble text={summary.code} delay={500} duration={1200} style={[T.display, { letterSpacing: 2 }]} />
             <Spacer h={16} />
             <Hairline />
             <Spacer h={16} />
             <Text style={[T.label, { color: color.red }]}>Profil · {profile.title}</Text>
             <Text style={[T.title, T.italic, { marginTop: 8 }]}>{profile.line}</Text>
           </View>
+          </Tilt>
         </Reveal>
 
         <Spacer h={32} />

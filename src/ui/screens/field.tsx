@@ -10,6 +10,7 @@ import { haptic } from '../haptics';
 import { CompassDial, DeviceIcon, FileIcon, Needle } from '../icons';
 import { Eyebrow, Flex, GhostButton, Hairline, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Counter, Pulse, Reveal, ScanLine } from '../motion';
+import { MaskReveal, Scramble, Tilt } from '../fx';
 import { color, motion, radius } from '../theme';
 
 // The camera module is only loaded on device: on web it pulls a barcode worker we do not need.
@@ -58,13 +59,7 @@ export function Brief({
         <Eyebrow>{eyebrow ?? `Mission ${number}`}</Eyebrow>
       </Reveal>
       <Spacer h={16} />
-      <Reveal delay={120}>
-        <Text style={T.display}>
-          {title}
-          {'\n'}
-          <Text style={T.italic}>{italic}</Text>
-        </Text>
-      </Reveal>
+      <MaskReveal style={T.display} lines={[title, <Text style={T.italic}>{italic}</Text>]} delay={120} />
       {quote && (
         <Reveal delay={300}>
           <Spacer h={24} />
@@ -156,7 +151,7 @@ export function Pocket({ flow, next }: { flow: Flow; next: Stage }) {
   return (
     <Screen
       bare
-      style={{ backgroundColor: color.black }}
+     
       footer={
         <GhostButton
           label="Prototype · simuler l’arrivée"
@@ -279,7 +274,7 @@ export function Viewfinder({
   }
 
   return (
-    <Screen bare style={{ backgroundColor: color.black }}>
+    <Screen bare>
       {nativeCamera && Camera && <Camera.CameraView style={StyleSheet.absoluteFill} facing="back" />}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Eyebrow red>Objectif</Eyebrow>
@@ -350,7 +345,7 @@ export function Detect({ flow, next, back }: { flow: Flow; next: Stage; back: St
   return (
     <Screen
       bare
-      style={{ backgroundColor: color.black }}
+     
       footer={
         <>
           <PrimaryButton
@@ -454,12 +449,13 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
       </Reveal>
       <Spacer h={24} />
       <Reveal delay={150}>
-        <View style={{ backgroundColor: color.surface, borderRadius: radius.l, borderWidth: 1, borderColor: color.line }}>
+        <Tilt radius={radius.l}>
+        <View style={{ backgroundColor: 'rgba(19,22,25,0.82)', borderRadius: radius.l, borderWidth: 1, borderColor: color.lineHi }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16 }}>
             <FileIcon />
-            <Text style={[T.monoL, { color: color.ink, flex: 1 }]} numberOfLines={1}>
-              {file.fileName}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Scramble text={file.fileName} delay={250} duration={600} numberOfLines={1} style={[T.monoL, { color: color.ink }]} />
+            </View>
             <Text style={T.mono}>{file.title.toUpperCase()}</Text>
           </View>
           <Hairline />
@@ -467,13 +463,12 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
             {file.lines.map((line, i) => {
               const hit = HIGHLIGHT.test(line);
               return (
-                <Reveal key={line} delay={500 + i * 280} from={4}>
-                  <Text style={[T.monoL, hit && { color: color.ink, fontFamily: T.bodyStrong.fontFamily }]}>{line}</Text>
-                </Reveal>
+                <Scramble key={line} text={line} delay={500 + i * 280} duration={420 + line.length * 12} style={[T.monoL, hit && { color: color.ink, fontFamily: T.bodyStrong.fontFamily }]} />
               );
             })}
           </View>
         </View>
+        </Tilt>
       </Reveal>
       <Spacer h={16} />
       {variable && (
@@ -491,9 +486,7 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
         <Reveal delay={2400}>
           <Eyebrow red>Troisième suspect</Eyebrow>
           <Spacer h={8} />
-          <Text style={T.display}>
-            Marc <Text style={T.italic}>Delcourt.</Text>
-          </Text>
+          <MaskReveal style={T.display} lines={[<>Marc <Text style={T.italic}>Delcourt.</Text></>]} delay={2500} />
           <Text style={T.body}>La source de Nora. Il dit vouloir aider.</Text>
         </Reveal>
       ) : id === 'e04' ? (

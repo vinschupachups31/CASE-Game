@@ -108,7 +108,7 @@ export function FalseLead({ flow, id, next }: { flow: Flow; id: string; next: St
   }, []);
 
   return (
-    <Screen bare={sms} progress={progressOf(flow.stage)} style={sms ? { backgroundColor: color.black } : undefined} footer={<Reveal delay={2200}><PrimaryButton label="Continuer l’enquête" onPress={() => flow.go(next)} /></Reveal>}>
+    <Screen bare={sms} progress={progressOf(flow.stage)} footer={<Reveal delay={2200}><PrimaryButton label="Continuer l’enquête" onPress={() => flow.go(next)} /></Reveal>}>
       {sms && <Spacer h={32} />}
       <Reveal>
         <Eyebrow red>{lead.from}</Eyebrow>

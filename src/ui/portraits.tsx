@@ -1,5 +1,7 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { ease } from './fx';
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { CharacterId, PortraitPart } from '../types/case';
 import { revealedTraits } from '../engine/appearance';
@@ -182,10 +184,25 @@ export function Portrait({
   dim?: boolean;
 }) {
   const figure = FIGURES[id]((part) => !parts || parts.includes(part));
+
+  // A new detail develops like a Polaroid: a flash of light, then the image settles.
+  const known = parts?.length ?? 99;
+  const seen = useRef(known);
+  const flash = useSharedValue(0);
+  const pop = useSharedValue(1);
+  useEffect(() => {
+    if (known > seen.current) {
+      flash.value = withSequence(withTiming(0.85, { duration: 90 }), withTiming(0, { duration: 1400, easing: ease }));
+      pop.value = withSequence(withTiming(1.08, { duration: 120 }), withSpring(1, { damping: 9, stiffness: 140 }));
+    }
+    seen.current = known;
+  }, [known]);
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
   const clip = `clip-${id}`;
   return (
-    <View
-      style={{
+    <Animated.View
+      style={[popStyle, {
         width: size,
         height: size,
         borderRadius: size / 2,
@@ -195,7 +212,7 @@ export function Portrait({
         overflow: 'hidden',
         opacity: dim ? 0.35 : 1,
         backgroundColor: color.surfaceHi,
-      }}
+      }]}
     >
       <Svg width={size - 2} height={size - 2} viewBox="0 0 100 100">
         <Defs>
@@ -228,7 +245,8 @@ export function Portrait({
           {figure}
         </G>
       </Svg>
-    </View>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: '#FFF6E8' }, flashStyle]} />
+    </Animated.View>
   );
 }
 
