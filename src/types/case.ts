@@ -4,7 +4,10 @@ export type SuspectId = 'leo' | 'sarah' | 'marc';
 export type CharacterId = SuspectId | 'unknown';
 
 /** Environment slots filled by what the player finds in the real world. */
-export type WorldSlotKey = 'WORLD_01' | 'WORLD_02';
+export type WorldSlotKey = 'WORLD_01' | 'WORLD_02' | 'WORLD_03';
+
+/** Run length. Longer runs add story elements (people, items, false leads), never a different truth. */
+export type Mode = 'short' | 'normal' | 'immersive';
 
 export type ChallengeKind =
   | 'visible_year'
@@ -39,7 +42,37 @@ export type Lie = {
   hidesFactId: string;
 };
 
+/** How the player speaks: each person reacts differently to each tone. */
+export type Tone = 'empathy' | 'neutral' | 'pressure' | 'evidence';
+export type Effect = { trust: number; tension: number };
+
+export type IntroId = 'close' | 'honest' | 'blunt';
+
+/** Psychology of a person on the phone. Trust opens doors; tension past the limit ends the call. */
+export type Psyche = {
+  temperament: string;
+  /** What the player knows about them before calling. */
+  cue: string;
+  trust: number;
+  tensionLimit: number;
+  tones: Record<Tone, Effect>;
+  intros: Record<IntroId, Effect>;
+  lines: {
+    /** When the player asks before introducing themselves. */
+    suspicious: string;
+    /** When a question needs more trust than they have. */
+    evasive: string;
+    /** When tension reaches the limit. */
+    hangup: string;
+    /** After an introduction that lands well. */
+    warm: string;
+    /** After an introduction that lands badly. */
+    cold: string;
+  };
+};
+
 export type Suspect = {
+  psyche: Psyche;
   id: SuspectId;
   name: string;
   role: string;
@@ -54,6 +87,8 @@ export type Suspect = {
 };
 
 export type EvidenceDef = {
+  /** Shortest mode in which this item appears (default: every mode). */
+  minMode?: Mode;
   id: string;
   title: string;
   /** Template; `{WORLD_01}`, `{WORLD_02}` and `{CODE}` are replaced from the run. */
@@ -65,6 +100,7 @@ export type EvidenceDef = {
 };
 
 export type WorldSlotDef = {
+  minMode?: Mode;
   key: WorldSlotKey;
   challenge: ChallengeKind;
   prompt: string;
@@ -90,6 +126,8 @@ export type TopicDef = {
   requires?: Condition;
   /** Statement recorded in the run when this answer is given. */
   statementId?: string;
+  /** Trust needed before they say this (a lie needs none: lying is a defence). */
+  minTrust?: number;
   /** Flag set in the run when this answer is given. */
   setsFlag?: string;
 };
@@ -112,6 +150,26 @@ export type ChapterDef = {
   closing: string[];
 };
 
+/** Secondary character: a witness, never a suspect. Adds texture and leads, never changes the truth. */
+export type WitnessDef = {
+  id: string;
+  name: string;
+  role: string;
+  minMode: Mode;
+  /** What they tell the player; must agree with the canonical timeline. */
+  testimony: string;
+};
+
+/** A lead that points the wrong way. `why` records, for designers, why it is false. */
+export type FalseLeadDef = {
+  id: string;
+  title: string;
+  pointsTo: SuspectId;
+  minMode: Mode;
+  clue: string;
+  why: string;
+};
+
 export type CaseFile = {
   id: string;
   title: string;
@@ -127,5 +185,7 @@ export type CaseFile = {
   messages: MessageDef[];
   links: LinkDef[];
   chapters: ChapterDef[];
+  witnesses: WitnessDef[];
+  falseLeads: FalseLeadDef[];
   accusation: { requiredEvidence: string[]; requiredContradictions: string[] };
 };

@@ -55,10 +55,10 @@ export function simulate(profileId: Profile['id'], mode: RunMode = 'normal'): Te
 }
 
 /** Plays chapter I (and the chapter II opening) end to end with a scripted player. */
-export function playthrough(profileId: Profile['id'], accuse: SuspectId = 'marc'): { run: RunState; terrain: Terrain } {
+export function playthrough(profileId: Profile['id'], accuse: SuspectId = 'marc', mode: RunMode = 'normal'): { run: RunState; terrain: Terrain } {
   const profile = PROFILES[profileId];
-  const terrain = simulate(profileId);
-  let run = createRun('normal', `sim-${profileId}`);
+  const terrain = simulate(profileId, mode);
+  let run = createRun(mode, `sim-${profileId}`);
   const apply = (...events: GameEvent[]) => events.forEach((e) => (run = reduceGame(run, e)));
   const question = (suspectId: SuspectId, q: string) => apply(...ask(run, suspectId, q).events);
 
@@ -67,6 +67,7 @@ export function playthrough(profileId: Profile['id'], accuse: SuspectId = 'marc'
   question('leo', 'Où étiez-vous après l’appel ?');
   apply({ type: 'SET_FLAG', flag: 'SARAH_ANSWERED' });
   apply(profile.word ? { type: 'CAPTURE', slot: 'WORLD_02', raw: profile.word, source: 'simulation' } : { type: 'USE_FALLBACK', slot: 'WORLD_02' });
+  apply({ type: 'CAPTURE', slot: 'WORLD_03', raw: '12', source: 'simulation' });
   apply({ type: 'LINK', a: 'nora', b: 'leo' }, { type: 'LINK', a: 'leo', b: 'marc' });
   apply({ type: 'SET_FLAG', flag: 'WALKING_TO_ZONE_3' });
   question('marc', `Comment connaissez-vous ${run.variables.WORLD_01!.value} ?`);

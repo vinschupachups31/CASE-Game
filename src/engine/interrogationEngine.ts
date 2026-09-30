@@ -22,7 +22,7 @@ export function ask(run: RunState, suspectId: SuspectId, question: string, caseF
     const score = t.patterns.filter((p) => {
       const source = normalize(render(p, run, caseFile));
       // Skip patterns whose world variable is not captured yet.
-      return !/\{WORLD_0[12]\}/i.test(source) && new RegExp(source).test(q);
+      return !/\{WORLD_0[123]\}/i.test(source) && new RegExp(source).test(q);
     }).length;
     if (score > best) {
       best = score;

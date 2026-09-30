@@ -1,8 +1,8 @@
 // Run: the dynamic part of a game. It changes with the player, the truth does not.
 
-import { SuspectId, WorldSlotKey } from './case';
+import { Mode, SuspectId, WorldSlotKey } from './case';
 
-export type RunMode = 'short' | 'normal' | 'immersive';
+export type { Mode as RunMode } from './case';
 
 export type VariableSource = 'camera' | 'manual' | 'simulation' | 'fallback';
 
@@ -18,7 +18,7 @@ export type Statement = { id: string; suspectId: SuspectId; text: string; at: nu
 export type RunState = {
   id: string;
   caseId: string;
-  mode: RunMode;
+  mode: Mode;
   chapter: number;
   /** Monotonic clock (event counter), keeps the reducer deterministic. */
   tick: number;

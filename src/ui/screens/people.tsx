@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { CASE_2317 } from '../../cases/23-17';
 import { evidenceView, messageView } from '../../engine/gameEngine';
-import { ask } from '../../engine/interrogationEngine';
-import { SuspectId } from '../../types/case';
+import { CallState, INTROS, askInCall, introduce, moodOf, startCall } from '../../engine/callEngine';
+import { SuspectId, Tone } from '../../types/case';
 import { RunState } from '../../types/run';
 import { Flow, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
@@ -61,6 +61,8 @@ export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectI
         <Text style={[T.title, T.italic, { textAlign: 'center', color: color.muted }]}>{s.name.split(' ').slice(1).join(' ')}</Text>
         <Spacer h={8} />
         <Text style={T.caption}>{declined ? 'Il insiste.' : s.role}</Text>
+        <Spacer h={16} />
+        <Text style={[T.body, T.italic, { textAlign: 'center', color: color.muted, fontFamily: T.body.fontFamily }]}>{s.psyche.cue}</Text>
       </View>
       <Flex />
       {incoming ? (
@@ -103,13 +105,30 @@ function RoundButton({ tint, label, onPress, down }: { tint: string; label: stri
   );
 }
 
-// ---------- Interrogation: voice first, subtitles second, evidence as a weapon. ----------
+// ---------- Interrogation: introduce yourself, read the person, adapt your tone. ----------
 
-const QUESTIONS: Record<SuspectId, string[]> = {
-  leo: ['Nora vous a appelé à 21:53 ?', 'Où étiez-vous après l’appel ?', 'Vous l’avez suivie ?', 'Que savez-vous de Sarah ?'],
-  sarah: ['Sur quoi Nora enquêtait-elle ?', 'Pourquoi Léo mentirait ?'],
-  marc: ['Où étiez-vous à 22:41 ?', 'Vous connaissez Sarah Klein ?', 'Comment connaissez-vous {WORLD_01} ?', 'Pourquoi accuser Léo ?'],
+type Question = { text: string; tone: Tone };
+
+const QUESTIONS: Record<SuspectId, Question[]> = {
+  leo: [
+    { text: 'Nora vous a appelé à 21:53 ?', tone: 'neutral' },
+    { text: 'Vous devez être inquiet. Où étiez-vous après son appel ?', tone: 'empathy' },
+    { text: 'Arrêtez de mentir. Vous l’avez suivie ?', tone: 'pressure' },
+    { text: 'Que savez-vous de Sarah ?', tone: 'neutral' },
+  ],
+  sarah: [
+    { text: 'Sur quoi Nora enquêtait-elle ?', tone: 'neutral' },
+    { text: 'Pourquoi Léo mentirait ?', tone: 'empathy' },
+  ],
+  marc: [
+    { text: 'Où étiez-vous à 22:41 ?', tone: 'neutral' },
+    { text: 'Vous connaissez Sarah Klein ?', tone: 'neutral' },
+    { text: 'Vous teniez à Nora, n’est-ce pas ?', tone: 'empathy' },
+    { text: 'Comment connaissez-vous {WORLD_01} ?', tone: 'pressure' },
+  ],
 };
+
+const TONE_TAG: Record<Tone, string> = { empathy: 'doux', neutral: 'neutre', pressure: 'dur', evidence: 'preuve' };
 
 const PRESENT: Record<string, string> = {
   e01: 'Journal d’appels : Nora vous appelle à 21:53.',
@@ -130,24 +149,29 @@ export function Interrogation({
   canHangUp: (run: RunState) => boolean;
   hint: string;
   next: Stage;
-  /** First words of the call, spoken before the player asks anything. */
+  /** First words of the call, spoken before the player says anything. */
   opening: string;
 }) {
   const s = suspectOf(suspectId);
-  const [tab, setTab] = useState<'questions' | 'evidence'>('questions');
+  const [call, setCall] = useState<CallState>(() => startCall(suspectId));
+  const [tab, setTab] = useState<'intro' | 'questions' | 'evidence'>('intro');
   const [asked, setAsked] = useState<string[]>([]);
-  const [current, setCurrent] = useState<{ q: string; a: string }>();
+  const [current, setCurrent] = useState<{ q: string; a: string; guarded?: boolean }>();
   const [speaking, setSpeaking] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const world01 = flow.run.variables.WORLD_01?.value ?? '';
 
+  const turn = useRef(0);
+  function say(q: string, a: string, guarded?: boolean) {
+    const mine = ++turn.current;
+    setCurrent({ q, a, guarded });
+    setSpeaking(true);
+    speak(a, suspectId, () => mine === turn.current && setSpeaking(false));
+  }
+
   useEffect(() => {
     const t = setInterval(() => setSeconds((x) => x + 1), 1000);
-    const hello = setTimeout(() => {
-      setCurrent({ q: '', a: opening });
-      setSpeaking(true);
-      speak(opening, suspectId, () => setSpeaking(false));
-    }, 700);
+    const hello = setTimeout(() => say('', opening), 700);
     return () => {
       clearTimeout(hello);
       clearInterval(t);
@@ -155,47 +179,81 @@ export function Interrogation({
     };
   }, []);
 
-  function put(label: string, question: string) {
-    if (speaking) return;
-    const answer = ask(flow.run, suspectId, question);
-    flow.apply(...answer.events);
+  function react(before: CallState, after: CallState) {
+    if (after.hungUp) haptic.alarm();
+    else if (after.tension > before.tension + 15) haptic.warning();
+  }
+
+  // Tapping while they talk cuts them off, like a real call.
+  function present(intro: (typeof INTROS)[number]) {
+    const r = introduce(call, intro.id);
+    react(call, r.state);
+    setCall(r.state);
+    setTab('questions');
+    say(intro.text, r.text);
+  }
+
+  function put(label: string, question: string, tone: Tone) {
+    const r = askInCall(call, flow.run, question, tone);
+    react(call, r.state);
+    flow.apply(...r.events);
+    setCall(r.state);
     setAsked((a) => [...a, label]);
-    setCurrent({ q: question, a: answer.text });
-    setSpeaking(true);
-    speak(answer.text, suspectId, () => setSpeaking(false));
+    say(question, r.text, r.guarded);
+  }
+
+  function callBack() {
+    const fresh = startCall(suspectId, call.hangups);
+    setCall(fresh);
+    setTab('intro');
+    say('', suspectOf(suspectId).psyche.lines.suspicious);
   }
 
   const evidence = evidenceView(flow.run);
   const ready = canHangUp(flow.run);
   const clock = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  const mood = moodOf(call);
+  const tense = mood === 'À bout' || mood === 'Sur la défensive';
+  const limit = s.psyche.tensionLimit;
 
   return (
     <Screen
       bare
       footer={
-        <>
-          {!ready && asked.length >= 2 && <Text style={[T.caption, { textAlign: 'center' }]}>{hint}</Text>}
-          <PrimaryButton tone="red" label="Raccrocher" disabled={!ready || speaking} onPress={() => flow.go(next)} />
-        </>
+        call.hungUp ? (
+          <PrimaryButton label={`Rappeler ${s.name.split(' ')[0]}`} onPress={callBack} />
+        ) : (
+          <>
+            {!ready && asked.length >= 2 && <Text style={[T.caption, { textAlign: 'center' }]}>{hint}</Text>}
+            <PrimaryButton tone="red" label="Raccrocher" disabled={!ready || speaking} onPress={() => flow.go(next)} />
+          </>
+        )
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         <Avatar name={s.name} size={48} />
         <View style={{ flex: 1 }}>
           <Text style={T.bodyStrong}>{s.name}</Text>
-          <Text style={T.caption}>{s.role}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: call.hungUp || tense ? color.red : color.inkSoft }} />
+            <Text style={[T.caption, (call.hungUp || tense) && { color: color.red }]}>{call.hungUp ? 'A raccroché' : mood}</Text>
+          </View>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color.red }} />
-            <Text style={[T.mono, { color: color.red }]}>REC</Text>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: call.hungUp ? color.faint : color.red }} />
+            <Text style={[T.mono, { color: call.hungUp ? color.faint : color.red }]}>{call.hungUp ? 'FIN' : 'REC'}</Text>
           </View>
           <Text style={T.mono}>{clock}</Text>
         </View>
       </View>
+      {/* Tension: the player reads the person, not a score. */}
+      <View style={{ height: 2, backgroundColor: color.line, marginTop: 16, borderRadius: 1, overflow: 'hidden' }}>
+        <View style={{ height: 2, width: `${Math.min(100, (call.tension / limit) * 100)}%`, backgroundColor: tense || call.hungUp ? color.red : color.inkSoft }} />
+      </View>
 
       <View style={{ alignItems: 'center', marginVertical: 24 }}>
-        <Waveform active={speaking} bars={40} height={64} />
+        <Waveform active={speaking} bars={40} height={56} />
       </View>
 
       <View style={{ minHeight: 144, flexShrink: 1 }}>
@@ -203,7 +261,12 @@ export function Interrogation({
           <>
             {current.q ? <Text style={T.caption}>Toi — {current.q}</Text> : <Text style={T.caption}>{s.name.split(' ')[0]}</Text>}
             <Spacer h={8} />
-            <WordReveal key={current.q + asked.length} text={current.a} style={T.title} perWord={Math.round(estimateMs(current.a) / current.a.split(' ').length)} />
+            <WordReveal
+              key={current.q + asked.length + call.hangups}
+              text={current.a}
+              style={[T.title, current.guarded && { color: color.inkSoft }]}
+              perWord={Math.round(estimateMs(current.a) / current.a.split(' ').length)}
+            />
           </>
         ) : (
           <Text style={[T.title, T.italic, { color: color.faint }]}>« Allô ? »</Text>
@@ -211,25 +274,37 @@ export function Interrogation({
       </View>
 
       <Flex />
-      <View style={{ flexDirection: 'row', gap: 24, marginBottom: 16 }}>
-        {(['questions', 'evidence'] as const).map((k) => (
-          <Pressable key={k} onPress={() => setTab(k)} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: tab === k ? color.ink : 'transparent' }}>
-            <Text style={[T.label, { color: tab === k ? color.ink : color.muted }]}>
-              {k === 'questions' ? 'Questions' : `Preuves · ${evidence.length}`}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <ScrollView style={{ maxHeight: 216, flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: 8, paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
-        {tab === 'questions'
-          ? QUESTIONS[suspectId].map((q) => {
-              const text = q.replace('{WORLD_01}', world01);
-              return <Chip key={q} label={text} icon={asked.includes(text) ? '✓' : '→'} disabled={speaking} onPress={() => put(text, text)} />;
-            })
-          : evidence.map((e) => (
-              <Chip key={e.id} label={`Présenter ${e.fileName}`} icon="⌘" disabled={speaking} onPress={() => put(e.fileName, PRESENT[e.id] ?? e.title)} />
+      {call.hungUp ? (
+        <Reveal>
+          <Text style={[T.body, { textAlign: 'center', marginBottom: 16 }]}>
+            {s.name.split(' ')[0]} a raccroché. Tu peux rappeler, mais {s.id === 'sarah' ? 'elle' : 'il'} sera plus méfiant{s.id === 'sarah' ? 'e' : ''}.
+          </Text>
+        </Reveal>
+      ) : (
+        <>
+          <View style={{ flexDirection: 'row', gap: 24, marginBottom: 16 }}>
+            {(call.introduced ? (['questions', 'evidence'] as const) : (['intro', 'questions', 'evidence'] as const)).map((k) => (
+              <Pressable key={k} onPress={() => setTab(k)} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: tab === k ? color.ink : 'transparent' }}>
+                <Text style={[T.label, { color: tab === k ? color.ink : color.muted }]}>
+                  {k === 'intro' ? 'Se présenter' : k === 'questions' ? 'Questions' : `Preuves · ${evidence.length}`}
+                </Text>
+              </Pressable>
             ))}
-      </ScrollView>
+          </View>
+          <ScrollView style={{ maxHeight: 216, flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: 8, paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
+            {tab === 'intro'
+              ? INTROS.map((i) => <Chip key={i.id} label={i.label} icon="↳" onPress={() => present(i)} />)
+              : tab === 'questions'
+                ? QUESTIONS[suspectId].map((q) => {
+                    const text = q.text.replace('{WORLD_01}', world01);
+                    return <Chip key={q.text} label={text} icon={asked.includes(text) ? '✓' : TONE_TAG[q.tone]} onPress={() => put(text, text, q.tone)} />;
+                  })
+                : evidence.map((e) => (
+                    <Chip key={e.id} label={`Présenter ${e.fileName}`} icon="preuve" onPress={() => put(e.fileName, PRESENT[e.id] ?? e.title, 'evidence')} />
+                  ))}
+          </ScrollView>
+        </>
+      )}
     </Screen>
   );
 }

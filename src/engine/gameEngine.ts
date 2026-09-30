@@ -6,6 +6,7 @@ import { CASE_2317 } from '../cases/23-17';
 import { check } from './conditions';
 import { validateForSlot } from './challengeEngine';
 import { adaptiveCode, render } from './templates';
+import { inMode } from './modes';
 
 export function createRun(mode: RunMode = 'normal', id = 'run-' + Date.now().toString(36), caseFile: CaseFile = CASE_2317): RunState {
   return resolve(
@@ -36,7 +37,7 @@ export function resolve(run: RunState, caseFile: CaseFile = CASE_2317): RunState
   for (;;) {
     const before = next;
     for (const e of caseFile.evidence) {
-      if (!next.evidence.includes(e.id) && check(e.unlockWhen, next)) {
+      if (!next.evidence.includes(e.id) && inMode(e.minMode, next.mode) && check(e.unlockWhen, next)) {
         next = { ...next, evidence: [...next.evidence, e.id] };
       }
     }
@@ -64,7 +65,7 @@ export function reduceGame(run: RunState, event: GameEvent, caseFile: CaseFile =
   switch (event.type) {
     case 'CAPTURE': {
       const slot = caseFile.worldSlots.find((s) => s.key === event.slot);
-      if (!slot || run.variables[event.slot] || !check(slot.availableWhen, run)) return run;
+      if (!slot || !inMode(slot.minMode, run.mode) || run.variables[event.slot] || !check(slot.availableWhen, run)) return run;
       const result = validateForSlot(slot, event.raw);
       if (!result.ok) return run;
       const variable = { value: result.value, raw: result.raw, source: event.source };
@@ -72,7 +73,7 @@ export function reduceGame(run: RunState, event: GameEvent, caseFile: CaseFile =
     }
     case 'USE_FALLBACK': {
       const slot = caseFile.worldSlots.find((s) => s.key === event.slot);
-      if (!slot || run.variables[event.slot]) return run;
+      if (!slot || !inMode(slot.minMode, run.mode) || run.variables[event.slot]) return run;
       const variable = { value: slot.fallbackValue, raw: slot.fallbackValue, source: 'fallback' as const };
       return resolve({ ...ticked, variables: { ...run.variables, [event.slot]: variable } }, caseFile);
     }

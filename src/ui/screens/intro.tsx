@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { CASE_2317 } from '../../cases/23-17';
 import { MODES, RouteStop } from '../../engine/worldEngine';
+import { modeScope } from '../../engine/modes';
 import { RunMode } from '../../types/run';
 import { Flow } from '../flow';
 import { haptic } from '../haptics';
@@ -144,16 +145,16 @@ const MODE_SUB: Record<RunMode, string> = { short: '~20 MIN', normal: '~35 MIN',
 /** What actually changes between modes: how far the places are, so how much you walk. */
 const MODE_INFO: Record<RunMode, { pitch: string; detail: string }> = {
   short: {
-    pitch: 'Pour une pause.',
-    detail: 'Tous les lieux sont à moins de 1 km. Peu de marche : quand un lieu manque, l’énigme se joue là où tu es.',
+    pitch: 'L’essentiel de l’affaire.',
+    detail: 'Les trois suspects et les preuves clés, sans détour. Lieux à moins de 1 km : quand un lieu manque, l’énigme se joue là où tu es.',
   },
   normal: {
     pitch: 'Le parcours conseillé pour une première affaire.',
-    detail: 'Lieux jusqu’à 2 km. Marche et enquête s’équilibrent.',
+    detail: 'Un témoin entre en scène, une fausse piste brouille les cartes et une preuve de plus t’attend. Lieux jusqu’à 2 km.',
   },
   immersive: {
-    pitch: 'Pour redécouvrir ta ville.',
-    detail: 'Lieux jusqu’à 4 km, plus éloignés les uns des autres. Plus de marche, plus de temps pour observer entre deux indices.',
+    pitch: 'L’affaire au complet.',
+    detail: 'Un second témoin, une seconde fausse piste, une énigme du réel en plus et un objet caché de Nora. Lieux jusqu’à 4 km.',
   },
 };
 
@@ -189,6 +190,7 @@ export function Terrain({ flow }: { flow: Flow }) {
   }
 
   const t = flow.terrain;
+  const scope = modeScope(flow.run.mode);
   return (
     <Screen progress={0.1} footer={<PrimaryButton label="Commencer l’enquête" onPress={() => flow.go('mission1')} />}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -201,7 +203,7 @@ export function Terrain({ flow }: { flow: Flow }) {
             {[
               { n: t.zonesFound, l: 'zones\npubliques' },
               { n: 1, l: 'parcours\nà pied' },
-              { n: 2, l: 'énigmes\ndu réel' },
+              { n: scope.worldPuzzles, l: 'énigmes\ndu réel' },
             ].map((s, i) => (
               <View key={s.l} style={{ flex: 1 }}>
                 <Counter to={s.n} delay={200 + i * 150} style={T.display} />
@@ -227,7 +229,22 @@ export function Terrain({ flow }: { flow: Flow }) {
             {t.zonesFound} LIEU{t.zonesFound > 1 ? 'X' : ''} · {(t.distanceM / 1000).toFixed(1).replace('.', ',')} KM MAX · ~{t.durationMin} MIN
             {t.stops.some((x) => x.type === 'in_place') ? ` · ${t.stops.filter((x) => x.type === 'in_place').length} SUR PLACE` : ''}
           </Text>
-          <Text style={[T.caption, { marginTop: 8 }]}>Même affaire, même vérité dans les trois modes. Seule la marche change.</Text>
+          <Spacer h={16} />
+          <Text style={T.label}>Dans ton affaire</Text>
+          <View style={{ flexDirection: 'row', marginTop: 8 }}>
+            {[
+              { n: scope.suspects, l: 'suspects' },
+              { n: scope.witnesses.length, l: 'témoins' },
+              { n: scope.evidence, l: 'preuves' },
+              { n: scope.falseLeads.length, l: 'fausses\npistes' },
+            ].map((x) => (
+              <View key={x.l} style={{ flex: 1 }}>
+                <Counter to={x.n} duration={500} style={[T.title, x.n === 0 && { color: color.faint }]} />
+                <Text style={T.caption}>{x.l}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={[T.caption, { marginTop: 16 }]}>Même coupable dans les trois modes. Plus le parcours est long, plus l’affaire s’étoffe.</Text>
         </Reveal>
         <Spacer h={24} />
         {t.stops.map((stop, i) => (

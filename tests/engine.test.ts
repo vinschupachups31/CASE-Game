@@ -223,3 +223,75 @@ describe('Profil d’enquêteur et rendez-vous', () => {
     expect([after.getDate(), after.getHours(), after.getMinutes()]).toEqual([30, 7, 42]);
   });
 });
+
+describe('Modes — plus long = plus d’histoire, même vérité', () => {
+  it('chaque mode ajoute des éléments', async () => {
+    const { modeScope } = await import('../src/engine/modes');
+    const [s, n, i] = (['short', 'normal', 'immersive'] as const).map((m) => modeScope(m));
+    expect([s.witnesses.length, n.witnesses.length, i.witnesses.length]).toEqual([0, 1, 2]);
+    expect([s.falseLeads.length, n.falseLeads.length, i.falseLeads.length]).toEqual([0, 1, 2]);
+    expect([s.worldPuzzles, n.worldPuzzles, i.worldPuzzles]).toEqual([2, 2, 3]);
+    expect(s.evidence < n.evidence && n.evidence < i.evidence).toBe(true);
+  });
+
+  it('un élément long n’apparaît pas dans une partie courte', () => {
+    const short = playthrough('dense', 'marc', 'short').run;
+    expect(short.evidence).not.toContain('e04');
+    expect(short.variables.WORLD_03).toBeUndefined();
+    const immersive = playthrough('dense', 'marc', 'immersive').run;
+    expect(immersive.evidence).toEqual(expect.arrayContaining(['e04', 'e05']));
+  });
+
+  it('Marc reste responsable dans les trois modes', () => {
+    for (const mode of ['short', 'normal', 'immersive'] as const) {
+      expect(playthrough('small', 'marc', mode).run.accusation).toEqual({ suspectId: 'marc', correct: true });
+    }
+  });
+});
+
+describe('Appels — psychologie', () => {
+  const leoRun = () => afterYear();
+
+  it('poser une question sans se présenter braque la personne', async () => {
+    const { startCall, askInCall } = await import('../src/engine/callEngine');
+    const r = askInCall(startCall('leo'), leoRun(), 'Où étiez-vous après l’appel ?', 'neutral');
+    expect(r.text).toMatch(/qui vous êtes/);
+    expect(r.events).toEqual([]);
+    expect(r.state.tension).toBeGreaterThan(10);
+  });
+
+  it('Léo se ferme sous la pression et finit par raccrocher', async () => {
+    const { startCall, introduce, askInCall } = await import('../src/engine/callEngine');
+    let s = introduce(startCall('leo'), 'honest').state;
+    s = askInCall(s, leoRun(), 'Vous l’avez suivie ?', 'pressure').state;
+    const r = askInCall(s, leoRun(), 'Vous l’avez suivie ?', 'pressure');
+    expect(r.state.hungUp).toBe(true);
+    expect(r.text).toMatch(/Ne me rappelez pas/);
+  });
+
+  it('avec empathie, Léo parle de l’appel ; sans confiance, il esquive', async () => {
+    const { startCall, introduce, askInCall } = await import('../src/engine/callEngine');
+    const warm = introduce(startCall('leo'), 'close').state;
+    expect(askInCall(warm, leoRun(), 'Nora vous a appelé à 21:53 ?', 'empathy').text).toMatch(/elle avait peur/i);
+    const cold = introduce(startCall('leo'), 'blunt').state;
+    expect(askInCall(cold, leoRun(), 'Nora vous a appelé à 21:53 ?', 'neutral').guarded).toBe(true);
+  });
+
+  it('un mensonge ne demande pas de confiance, et rappeler reste possible', async () => {
+    const { startCall, introduce, askInCall } = await import('../src/engine/callEngine');
+    const s = introduce(startCall('leo'), 'blunt').state;
+    const r = askInCall(s, leoRun(), 'Où étiez-vous après l’appel ?', 'neutral');
+    expect(r.events.some((e) => e.type === 'STATEMENT')).toBe(true);
+    const again = startCall('leo', 1);
+    expect(again.hungUp).toBe(false);
+    expect(again.trust).toBeLessThan(startCall('leo').trust);
+  });
+
+  it('Marc reste calme bien plus longtemps', async () => {
+    const { startCall, introduce, askInCall } = await import('../src/engine/callEngine');
+    let run = reduceGame(afterYear(), { type: 'CAPTURE', slot: 'WORLD_02', raw: 'PHARMACIE', source: 'camera' });
+    let s = introduce(startCall('marc'), 'honest').state;
+    for (let i = 0; i < 3; i++) s = askInCall(s, run, 'Vous connaissez Sarah ?', 'pressure').state;
+    expect(s.hungUp).toBe(false);
+  });
+});

@@ -28,6 +28,15 @@ const ALL_LINES: VoiceLine[] = [
   ...(Object.keys(CASE_2317.topics) as SuspectId[]).flatMap((s) =>
     CASE_2317.topics[s].map((t) => ({ id: t.id, speaker: s as Speaker, text: t.answer, direction: CASTING[s] })),
   ),
+  // Reactions driven by the call's psychology.
+  ...CASE_2317.suspects.flatMap((s) =>
+    (Object.keys(s.psyche.lines) as (keyof typeof s.psyche.lines)[]).map((k) => ({
+      id: `${s.id}_${k}`,
+      speaker: s.id as Speaker,
+      text: s.psyche.lines[k],
+      direction: CASTING[s.id],
+    })),
+  ),
   // A suspect's default line when a question hits no topic.
   ...CASE_2317.suspects.map((s) => ({ id: `${s.id}_claim`, speaker: s.id as Speaker, text: s.claim, direction: CASTING[s.id] })),
 ];

@@ -1,4 +1,4 @@
-import { CaseFile } from '../types/case';
+import { CaseFile, WorldSlotKey } from '../types/case';
 import { RunState } from '../types/run';
 
 /** Adaptive code built from the environment, e.g. 1927-A. */
@@ -10,9 +10,9 @@ export function adaptiveCode(run: RunState, caseFile: CaseFile): string {
 
 /** Replaces {WORLD_01}, {WORLD_02} and {CODE} with the values of this run. */
 export function render(template: string, run: RunState, caseFile: CaseFile): string {
-  return template.replace(/\{(WORLD_0[12]|CODE)\}/g, (match, key: string) => {
+  return template.replace(/\{(WORLD_0[123]|CODE)\}/g, (match, key: string) => {
     if (key === 'CODE') return adaptiveCode(run, caseFile);
-    return run.variables[key as 'WORLD_01' | 'WORLD_02']?.value ?? match;
+    return run.variables[key as WorldSlotKey]?.value ?? match;
   });
 }
 

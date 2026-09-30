@@ -77,13 +77,17 @@ export function WordReveal({
 /** Counts up to `to`. Numbers that move feel earned. */
 export function Counter({ to, duration = 900, delay = 0, style, pad = 0 }: { to: number; duration?: number; delay?: number; style?: StyleProp<TextStyle>; pad?: number }) {
   const [n, setN] = useState(0);
+  // Animates from the value on screen, so a change (e.g. another mode) moves smoothly instead of restarting at 0.
+  const shown = useRef(0);
   useEffect(() => {
     let raf: ReturnType<typeof setTimeout>;
-    const start = Date.now() + delay;
+    const from = shown.current;
+    const start = Date.now() + (from === 0 ? delay : 0);
     const tick = () => {
       const t = Math.min(1, Math.max(0, (Date.now() - start) / duration));
       const eased = 1 - Math.pow(1 - t, 4);
-      setN(Math.round(eased * to));
+      shown.current = Math.round(from + eased * (to - from));
+      setN(shown.current);
       if (t < 1) raf = setTimeout(tick, 16);
     };
     raf = setTimeout(tick, 16);

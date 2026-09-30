@@ -43,6 +43,30 @@ export const CASE_2317: CaseFile = deepFreeze({
   suspects: [
     {
       id: 'leo',
+      psyche: {
+        temperament: 'Fragile, sur la défensive',
+        cue: 'Il a peur d’être accusé. Brusqué, il se ferme. Rassuré, il parle.',
+        trust: 30,
+        tensionLimit: 70,
+        tones: {
+          empathy: { trust: 15, tension: -10 },
+          neutral: { trust: 0, tension: 5 },
+          pressure: { trust: -15, tension: 30 },
+          evidence: { trust: -5, tension: 20 },
+        },
+        intros: {
+          close: { trust: 20, tension: -10 },
+          honest: { trust: 5, tension: 0 },
+          blunt: { trust: -15, tension: 30 },
+        },
+        lines: {
+          suspicious: 'Je raccroche si vous ne me dites pas qui vous êtes.',
+          evasive: 'Je… je sais pas. Laissez-moi tranquille avec ça.',
+          hangup: 'C’est bon, j’en ai assez. Ne me rappelez pas.',
+          warm: 'Vous la cherchez aussi ? … D’accord. Allez-y.',
+          cold: 'Et je devrais vous répondre, moi ?',
+        },
+      },
       name: 'Léo Vasseur',
       role: 'Compagnon / ex de Nora',
       claim: 'Je suis rentré chez moi après l’appel. Toute la soirée.',
@@ -56,6 +80,30 @@ export const CASE_2317: CaseFile = deepFreeze({
     },
     {
       id: 'sarah',
+      psyche: {
+        temperament: 'Anxieuse, protège sa carrière',
+        cue: 'Elle a peur pour son travail. Elle parlera si elle se sent en sécurité.',
+        trust: 35,
+        tensionLimit: 60,
+        tones: {
+          empathy: { trust: 15, tension: -10 },
+          neutral: { trust: 5, tension: 0 },
+          pressure: { trust: -20, tension: 30 },
+          evidence: { trust: -5, tension: 25 },
+        },
+        intros: {
+          close: { trust: 15, tension: -5 },
+          honest: { trust: 0, tension: 10 },
+          blunt: { trust: -20, tension: 30 },
+        },
+        lines: {
+          suspicious: 'Qui vous a donné ce numéro ?',
+          evasive: 'Je ne peux pas parler de ça. Pas maintenant.',
+          hangup: 'Désolée. Je ne peux pas faire ça.',
+          warm: 'D’accord… mais tout ça reste entre nous.',
+          cold: 'Je ne vous connais pas. Faites vite.',
+        },
+      },
       name: 'Sarah Klein',
       role: 'Collègue et meilleure amie de Nora',
       claim: 'Je ne sais pas précisément sur quoi Nora enquêtait.',
@@ -69,6 +117,30 @@ export const CASE_2317: CaseFile = deepFreeze({
     },
     {
       id: 'marc',
+      psyche: {
+        temperament: 'Calme, veut garder le contrôle',
+        cue: 'Posé et serviable. Il aime qu’on le prenne au sérieux, pas qu’on le bouscule.',
+        trust: 50,
+        tensionLimit: 90,
+        tones: {
+          empathy: { trust: 5, tension: 0 },
+          neutral: { trust: 5, tension: 0 },
+          pressure: { trust: -10, tension: 20 },
+          evidence: { trust: -10, tension: 25 },
+        },
+        intros: {
+          close: { trust: 0, tension: 5 },
+          honest: { trust: 10, tension: 0 },
+          blunt: { trust: -5, tension: 15 },
+        },
+        lines: {
+          suspicious: 'Je parle rarement à des inconnus. Présentez-vous.',
+          evasive: 'Je vous ai dit ce que je savais.',
+          hangup: 'Je crois que cette conversation est terminée.',
+          warm: 'Enfin quelqu’un de sérieux. Je vais vous aider.',
+          cold: 'Vous avez un drôle de ton. Mais soit.',
+        },
+      },
       name: 'Marc Delcourt',
       role: 'Source de Nora',
       claim: 'Je veux vous aider. Léo la suivait.',
@@ -98,6 +170,14 @@ export const CASE_2317: CaseFile = deepFreeze({
       fallbackValue: 'N',
       availableWhen: { evidence: 'e01' },
     },
+    {
+      key: 'WORLD_03',
+      minMode: 'immersive',
+      challenge: 'visible_number',
+      prompt: 'Trouve un nombre affiché autour de toi : un numéro de rue, une porte, un horaire.',
+      fallbackValue: '7',
+      availableWhen: { evidence: 'e02' },
+    },
   ],
 
   evidence: [
@@ -123,6 +203,23 @@ export const CASE_2317: CaseFile = deepFreeze({
       fileName: 'NOTE_{WORLD_02}.txt',
       lines: ['M.D. sait que Sarah m’a donné les fichiers.'],
       unlockWhen: { chapter: 2 },
+    },
+    // ---- PROPOSITION (à valider) : éléments ajoutés par les modes longs ----
+    {
+      id: 'e04',
+      minMode: 'normal',
+      title: 'Ticket de caisse',
+      fileName: 'TICKET_{WORLD_01}.jpg',
+      lines: ['Café du Marché', '22:34', '2 CAFÉS', 'Nora n’était pas seule.'],
+      unlockWhen: { evidence: 'e02' },
+    },
+    {
+      id: 'e05',
+      minMode: 'immersive',
+      title: 'Clé USB de Nora',
+      fileName: 'USB_{WORLD_03}.zip',
+      lines: ['12 fichiers', 'Transmis par : S.K.', 'Tous citent la même société.'],
+      unlockWhen: { variable: 'WORLD_03' },
     },
   ],
 
@@ -154,6 +251,7 @@ export const CASE_2317: CaseFile = deepFreeze({
     leo: [
       {
         id: 'leo_call',
+        minTrust: 40,
         patterns: ['appel', '21.?53', 'telephone'],
         answer: 'Oui, elle m’a appelé. Elle avait peur de quelque chose. Elle n’a pas voulu dire quoi.',
       },
@@ -171,6 +269,7 @@ export const CASE_2317: CaseFile = deepFreeze({
       },
       {
         id: 'leo_marc',
+        minTrust: 45,
         patterns: ['marc', 'delcourt'],
         requires: { suspect: 'marc' },
         answer: 'Delcourt ? Elle en parlait comme d’une source. Elle lui faisait confiance… trop, peut-être.',
@@ -197,11 +296,13 @@ export const CASE_2317: CaseFile = deepFreeze({
       },
       {
         id: 'sarah_leo',
+        minTrust: 35,
         patterns: ['leo', 'vasseur', '\\bment'],
         answer: 'Léo ne la lâchait pas. Ces derniers temps, il était partout où elle allait.',
       },
       {
         id: 'sarah_marc',
+        minTrust: 45,
         patterns: ['marc', 'delcourt'],
         requires: { suspect: 'marc' },
         answer: 'Marc Delcourt… Nora protégeait ses sources. Je ne peux rien vous dire.',
@@ -277,6 +378,42 @@ export const CASE_2317: CaseFile = deepFreeze({
         'La question n’est plus : qui l’a vue ?',
         'Mais : qui savait ce qu’elle avait découvert ?',
       ],
+    },
+  ],
+
+  // ---- PROPOSITION (à valider) : personnages secondaires et fausses pistes des modes longs ----
+  witnesses: [
+    {
+      id: 'ines',
+      name: 'Inès Morel',
+      role: 'Serveuse au Café du Marché',
+      minMode: 'normal',
+      testimony: 'Elle a servi Nora vers 22:30. Un homme calme, la cinquantaine, l’a rejointe. Elle ne l’a pas bien vu.',
+    },
+    {
+      id: 'paul',
+      name: 'Paul Garnier',
+      role: 'Gardien de l’immeuble de Nora',
+      minMode: 'immersive',
+      testimony: 'Nora est sortie vers 21:45, pressée, sans son vélo. Un jeune homme attendait en bas. Il est parti derrière elle.',
+    },
+  ],
+  falseLeads: [
+    {
+      id: 'fl_leo_sms',
+      title: 'SMS anonyme',
+      pointsTo: 'leo',
+      minMode: 'normal',
+      clue: '« Léo l’a suivie jusqu’au quai. Demandez-lui ce qu’il a fait ensuite. »',
+      why: 'Envoyé par Marc. Léo l’a bien suivie, mais l’a perdue avant 22:30.',
+    },
+    {
+      id: 'fl_sarah_mails',
+      title: 'Emails supprimés',
+      pointsTo: 'sarah',
+      minMode: 'immersive',
+      clue: 'Sarah a effacé 40 emails échangés avec Nora le jour de sa disparition.',
+      why: 'Sarah protège sa carrière : les emails prouvent qu’elle a fourni les documents, pas qu’elle est coupable.',
     },
   ],
 
