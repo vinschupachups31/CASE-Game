@@ -381,3 +381,35 @@ describe('Portraits — découverts au fil de l’enquête', () => {
     }
   });
 });
+
+describe('Modes longs — témoins, fausses pistes, énigme du nombre', () => {
+  it('le parcours saute les étapes absentes du mode', async () => {
+    const { resolveStage } = await import('../src/ui/flow');
+    expect(resolveStage('leadLeo', 'short')).toBe('mission2');
+    expect(resolveStage('leadLeo', 'normal')).toBe('leadLeo');
+    expect(resolveStage('paul', 'normal')).toBe('mission2');
+    expect(resolveStage('ticket', 'short')).toBe('board');
+    expect(resolveStage('mission3', 'normal')).toBe('ringSarah');
+    expect(resolveStage('mission3', 'immersive')).toBe('mission3');
+  });
+
+  it('Paul contredit Léo : contradiction établie, mais Léo reste innocent', () => {
+    let run = afterYear();
+    for (const e of ask(run, 'leo', 'Où étiez-vous après l’appel ?').events) run = reduceGame(run, e);
+    run = reduceGame(run, { type: 'SET_FLAG', flag: 'WITNESS_PAUL' });
+    expect(contradictionView(run).find((c) => c.id === 'c_leo_followed')?.level).toBe('established');
+    const accused = reduceGame(run, { type: 'ACCUSE', suspectId: 'leo', contradictionId: 'c_leo_followed' });
+    expect(accused.accusation?.correct).toBe(false);
+  });
+
+  it('le nombre trouvé ouvre la clé USB de Nora', () => {
+    const run = playthrough('dense', 'marc', 'immersive').run;
+    expect(evidenceView(run).find((e) => e.id === 'e05')?.fileName).toBe('USB_12.zip');
+  });
+
+  it('les témoins ont leurs répliques dans la liste des voix', async () => {
+    const { VOICE_LINES } = await import('../src/voice/lines');
+    expect(VOICE_LINES.filter((l) => l.speaker === 'ines')).toHaveLength(3);
+    expect(VOICE_LINES.filter((l) => l.speaker === 'paul')).toHaveLength(3);
+  });
+});

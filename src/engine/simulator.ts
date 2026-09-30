@@ -7,6 +7,7 @@ import { CASE_2317 } from '../cases/23-17';
 import { Candidate, Terrain, buildTerrain } from './worldEngine';
 import { createRun, reduceGame } from './gameEngine';
 import { ask } from './interrogationEngine';
+import { inMode } from './modes';
 
 export type Profile = {
   id: 'dense' | 'small' | 'rural';
@@ -66,6 +67,9 @@ export function playthrough(profileId: Profile['id'], accuse: SuspectId = 'marc'
   apply(profile.year ? { type: 'CAPTURE', slot: 'WORLD_01', raw: profile.year, source: 'simulation' } : { type: 'USE_FALLBACK', slot: 'WORLD_01' });
   question('leo', 'Où étiez-vous après l’appel ?');
   apply({ type: 'SET_FLAG', flag: 'SARAH_ANSWERED' });
+  // Long modes: the scripted player hears every witness and sees every lead of the mode.
+  for (const w of CASE_2317.witnesses.filter((x) => inMode(x.minMode, mode))) apply({ type: 'SET_FLAG', flag: w.setsFlag });
+  for (const l of CASE_2317.falseLeads.filter((x) => inMode(x.minMode, mode))) apply({ type: 'SET_FLAG', flag: l.setsFlag });
   apply(profile.word ? { type: 'CAPTURE', slot: 'WORLD_02', raw: profile.word, source: 'simulation' } : { type: 'USE_FALLBACK', slot: 'WORLD_02' });
   apply({ type: 'CAPTURE', slot: 'WORLD_03', raw: '12', source: 'simulation' });
   apply({ type: 'LINK', a: 'nora', b: 'leo' }, { type: 'LINK', a: 'leo', b: 'marc' });

@@ -232,6 +232,13 @@ export const CASE_2317: CaseFile = deepFreeze({
       detectedWhen: { all: [{ statement: 'leo_home' }, { message: 'sarah_01' }] },
     },
     {
+      id: 'c_leo_followed',
+      suspectId: 'leo',
+      label: 'Léo dit être rentré chez lui. Le gardien l’a vu partir derrière Nora.',
+      level: 'established',
+      detectedWhen: { all: [{ statement: 'leo_home' }, { flag: 'WITNESS_PAUL' }] },
+    },
+    {
       id: 'c_marc_world01',
       suspectId: 'marc',
       label: 'Marc esquive toute question sur {WORLD_01}. Qui d’autre pouvait connaître ce chiffre ?',
@@ -401,6 +408,13 @@ export const CASE_2317: CaseFile = deepFreeze({
       role: 'Serveuse au Café du Marché',
       minMode: 'normal',
       testimony: 'Elle a servi Nora vers 22:30. Un homme calme, la cinquantaine, l’a rejointe. Elle ne l’a pas bien vu.',
+      place: 'Café du Marché',
+      lines: [
+        'La femme de la photo ? Oui, je l’ai servie. Vers 22:30.',
+        'Un homme l’a rejointe. Calme, la cinquantaine. Une belle montre, il regardait l’heure sans arrêt.',
+        'Deux cafés. Je n’ai pas bien vu son visage. Désolée.',
+      ],
+      setsFlag: 'WITNESS_INES',
     },
     {
       id: 'paul',
@@ -408,6 +422,13 @@ export const CASE_2317: CaseFile = deepFreeze({
       role: 'Gardien de l’immeuble de Nora',
       minMode: 'immersive',
       testimony: 'Nora est sortie vers 21:45, pressée, sans son vélo. Un jeune homme attendait en bas. Il est parti derrière elle.',
+      place: 'Loge de l’immeuble de Nora',
+      lines: [
+        'Mademoiselle Valen ? Elle est sortie vers 21:45. Pressée. Sans son vélo, ça m’a étonné.',
+        'Un jeune homme attendait en bas. Sweat gris, capuche.',
+        'Quand elle est passée, il est parti derrière elle.',
+      ],
+      setsFlag: 'WITNESS_PAUL',
     },
   ],
   falseLeads: [
@@ -418,6 +439,8 @@ export const CASE_2317: CaseFile = deepFreeze({
       minMode: 'normal',
       clue: '« Léo l’a suivie jusqu’au quai. Demandez-lui ce qu’il a fait ensuite. »',
       why: 'Envoyé par Marc. Léo l’a bien suivie, mais l’a perdue avant 22:30.',
+      from: 'Numéro masqué',
+      setsFlag: 'LEAD_LEO_SMS',
     },
     {
       id: 'fl_sarah_mails',
@@ -426,6 +449,8 @@ export const CASE_2317: CaseFile = deepFreeze({
       minMode: 'immersive',
       clue: 'Sarah a effacé 40 emails échangés avec Nora le jour de sa disparition.',
       why: 'Sarah protège sa carrière : les emails prouvent qu’elle a fourni les documents, pas qu’elle est coupable.',
+      from: 'Source anonyme au journal',
+      setsFlag: 'LEAD_SARAH_MAILS',
     },
   ],
 
@@ -447,7 +472,7 @@ export const CASE_2317: CaseFile = deepFreeze({
         part: 'top',
         label: 'Sweat gris à capuche',
         source: 'Sarah : « Toujours le même sweat gris. On le repère de loin. »',
-        revealWhen: { any: [{ flag: 'SARAH_ANSWERED' }, { flag: 'SARAH_CONFESSED' }] },
+        revealWhen: { any: [{ flag: 'SARAH_ANSWERED' }, { flag: 'WITNESS_PAUL' }, { flag: 'SARAH_CONFESSED' }] },
       },
       {
         id: 'leo_earbuds',
@@ -500,7 +525,8 @@ export const CASE_2317: CaseFile = deepFreeze({
         part: 'accessory',
         label: 'Montre en or',
         source: 'Inès, serveuse au Café du Marché : « Une belle montre. Il regardait l’heure sans arrêt. »',
-        revealWhen: { evidence: 'e04' },
+        revealWhen: { flag: 'WITNESS_INES' },
+        minMode: 'normal',
       },
     ],
   },

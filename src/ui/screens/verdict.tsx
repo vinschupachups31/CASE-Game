@@ -146,6 +146,7 @@ export function Verdict({ flow }: { flow: Flow }) {
   const vote = flow.run.flags.find((f) => f.startsWith('VOTE_'))?.slice(5).toLowerCase() as SuspectId | undefined;
   const proof = contradictionView(flow.run).find((c) => c.id === flow.run.accusation?.contradictionId);
   const hidden = v.accused.lies.map((l) => v.facts.find((f) => f.id === l.hidesFactId)!.text);
+  const leads = CASE_2317.falseLeads.filter((l) => flow.run.flags.includes(l.setsFlag));
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -240,6 +241,22 @@ export function Verdict({ flow }: { flow: Flow }) {
 
         <Spacer h={32} />
         <WordReveal text={summary.closing.join(' ')} style={[T.title, { color: color.ink }]} delay={1800} perWord={140} />
+
+        {leads.length > 0 && (
+          <Reveal delay={2600}>
+            <Spacer h={40} />
+            <Text style={T.label}>Les fausses pistes</Text>
+            <Spacer h={8} />
+            {leads.map((l) => (
+              <View key={l.id} style={{ borderLeftWidth: 1, borderLeftColor: color.line, paddingLeft: 16, marginTop: 16 }}>
+                <Text style={[T.label, { color: color.muted }]}>
+                  {l.title} · vers {SUSPECT_SHORT[l.pointsTo]}
+                </Text>
+                <Text style={T.body}>{l.why}</Text>
+              </View>
+            ))}
+          </Reveal>
+        )}
 
         {vote && (
           <Reveal delay={3200}>

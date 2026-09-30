@@ -2,6 +2,7 @@ import { SuspectId, WorldSlotKey } from '../types/case';
 import { GameEvent, RunMode, RunState } from '../types/run';
 import { Profile } from '../engine/simulator';
 import { Terrain } from '../engine/worldEngine';
+import { inMode } from '../engine/modes';
 
 /** Chapter I, beat by beat. Each stage is one screen with one main action. */
 export const STAGES = [
@@ -18,10 +19,14 @@ export const STAGES = [
   'ringLeo',
   'callLeo',
   'sarah',
+  'leadLeo',
+  'paul',
   'mission2',
   'capture2',
   'detect2',
   'evidence2',
+  'ticket',
+  'ines',
   'board',
   'walk',
   'threat',
@@ -31,6 +36,11 @@ export const STAGES = [
   // Chapter II: the hidden note, Sarah, Marc again, the accusation.
   'chapter2',
   'evidence3',
+  'mission3',
+  'capture3',
+  'detect3',
+  'evidence5',
+  'leadSarah',
   'ringSarah',
   'callSarah',
   'ringMarc2',
@@ -57,10 +67,14 @@ export const STAGE_NAMES: Record<Stage, string> = {
   ringLeo: 'Appel Léo',
   callLeo: 'Interrogatoire Léo',
   sarah: 'Messages Sarah',
+  leadLeo: 'SMS anonyme',
+  paul: 'Témoin Paul',
   mission2: 'Mission 2',
   capture2: 'Viseur mot',
   detect2: 'Détection mot',
   evidence2: 'Preuve dossier',
+  ticket: 'Ticket de caisse',
+  ines: 'Témoin Inès',
   board: 'Carnet',
   walk: 'Marche',
   threat: 'Numéro inconnu',
@@ -69,6 +83,11 @@ export const STAGE_NAMES: Record<Stage, string> = {
   end: 'Fin de chapitre',
   chapter2: 'Chapitre II',
   evidence3: 'Note de Nora',
+  mission3: 'Mission 5',
+  capture3: 'Viseur nombre',
+  detect3: 'Détection nombre',
+  evidence5: 'Clé USB',
+  leadSarah: 'Emails supprimés',
   ringSarah: 'Appel Sarah',
   callSarah: 'Interrogatoire Sarah',
   ringMarc2: 'Rappel Marc',
@@ -77,6 +96,26 @@ export const STAGE_NAMES: Record<Stage, string> = {
   accuse: 'Accusation',
   verdict: 'Verdict',
 };
+
+/** Stages that only exist in longer runs: more story, same truth. */
+export const STAGE_MODE: Partial<Record<Stage, RunMode>> = {
+  leadLeo: 'normal',
+  paul: 'immersive',
+  ticket: 'normal',
+  ines: 'normal',
+  mission3: 'immersive',
+  capture3: 'immersive',
+  detect3: 'immersive',
+  evidence5: 'immersive',
+  leadSarah: 'immersive',
+};
+
+/** The stage actually shown: skips forward past stages this run's mode does not include. */
+export function resolveStage(stage: Stage, mode: RunMode): Stage {
+  let i = STAGES.indexOf(stage);
+  while (!inMode(STAGE_MODE[STAGES[i]], mode)) i++;
+  return STAGES[i];
+}
 
 export const pageLabel = (stage: Stage) => `${String(STAGES.indexOf(stage) + 1).padStart(2, '0')} · ${STAGE_NAMES[stage]}`;
 

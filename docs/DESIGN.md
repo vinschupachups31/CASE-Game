@@ -28,6 +28,20 @@ Les suspects **se découvrent** : chacun commence en silhouette nue, puis gagne 
 
 Certains détails récompensent un choix (répondre à Sarah, mettre Léo en confiance) ; les modes longs en révèlent plus. Chaque découverte déclenche une notification « Portrait de Léo · Sweat gris à capuche ». L'écran d'appel affiche « PORTRAIT 2/3 » et les détails connus ; au verdict, le portrait de l'accusé apparaît en entier.
 
+## Modes longs (`STAGE_MODE` dans `src/ui/flow.ts`)
+Les étapes absentes du mode choisi sont sautées automatiquement. Plus long = plus d'histoire, même vérité.
+
+| Étape | Mode | Contenu |
+|---|---|---|
+| SMS anonyme | normal + | fausse piste vers Léo (envoyée par Marc, expliquée au verdict) |
+| Témoin Paul | immersif | le gardien a vu un jeune homme en sweat gris partir derrière Nora → **contradiction établie contre Léo**, qui reste innocent |
+| Ticket de caisse | normal + | Café du Marché, 22:34, deux cafés |
+| Témoin Inès | normal + | un homme calme, la cinquantaine, une belle montre → détail du portrait de Marc |
+| Mission 5 · nombre | immersif | WORLD_03 : un nombre de la rue du joueur ouvre la clé USB de Nora (« Transmis par : S.K. ») |
+| Emails supprimés | immersif | fausse piste vers Sarah, expliquée au verdict |
+
+Les témoins se joignent par téléphone et parlent ligne par ligne (voix enregistrées quand elles existeront, sous-titres sinon). Au verdict, chaque fausse piste suivie est expliquée.
+
 ## Moments clés
 - **Pic** : le numéro inconnu. Écran noir, vibration, léger glitch, la valeur trouvée par le joueur soulignée en rouge, puis « Tu as trouvé 1927 il y a 6 min. » et l’appel de Marc qui suit sans transition.
 - **Verdict** (chapitre II) : le joueur choisit une personne **et** une preuve. Bonne personne + contradiction établie = accusation retenue ; bonne personne sur une esquive ou une intuition = accusation fragile ; mauvaise personne = on révèle ce qu’elle cachait. La vérité (chronologie 21:53 · 22:41 · 23:17) est révélée dans tous les cas, et le vote scellé du chapitre I est dévoilé.

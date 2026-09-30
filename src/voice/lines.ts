@@ -5,7 +5,7 @@
 import { CASE_2317 } from '../cases/23-17';
 import { SuspectId } from '../types/case';
 
-export type Speaker = 'nora' | SuspectId;
+export type Speaker = 'nora' | SuspectId | 'ines' | 'paul';
 export type VoiceLine = { id: string; speaker: Speaker; text: string; direction: string };
 
 export const CALL_OPENINGS = {
@@ -23,6 +23,8 @@ export const CASTING: Record<Speaker, string> = {
   leo: 'Homme, 30-35 ans, ex de Nora. Nerveux, sur la défensive, phrases courtes, cache quelque chose.',
   sarah: 'Femme, 30-35 ans, collègue et meilleure amie de Nora. Rapide, inquiète, prudente.',
   marc: 'Homme, 50-55 ans, source de Nora. Calme, posé, chaleureux en surface, manipulateur.',
+  ines: 'Femme, 25 ans, serveuse. Bruit de café derrière, pressée mais sincère, veut aider.',
+  paul: 'Homme, 65 ans, gardien d’immeuble. Lent, précis, un peu inquiet pour « mademoiselle Valen ».',
 };
 
 const ALL_LINES: VoiceLine[] = [
@@ -34,6 +36,10 @@ const ALL_LINES: VoiceLine[] = [
   { id: 'marc_opening_again', speaker: 'marc', text: CALL_OPENINGS.marc_again, direction: CASTING.marc },
   ...(Object.keys(CASE_2317.topics) as SuspectId[]).flatMap((s) =>
     CASE_2317.topics[s].map((t) => ({ id: t.id, speaker: s as Speaker, text: t.answer, direction: CASTING[s] })),
+  ),
+  // Witnesses, one clip per line (long modes).
+  ...CASE_2317.witnesses.flatMap((w) =>
+    w.lines.map((text, i) => ({ id: `${w.id}_${i + 1}`, speaker: w.id as Speaker, text, direction: CASTING[w.id as Speaker] })),
   ),
   // Reactions driven by the call's psychology.
   ...CASE_2317.suspects.flatMap((s) =>

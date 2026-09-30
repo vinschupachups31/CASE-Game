@@ -10,7 +10,7 @@ import { CASE_2317 } from '../src/cases/23-17';
 import { createRun, isChapterComplete, reduceGame } from '../src/engine/gameEngine';
 import { PROFILES, Profile, simulate } from '../src/engine/simulator';
 import { GameEvent, RunMode, RunState } from '../src/types/run';
-import { Flow, ROMAN, SUSPECT_SHORT, Stage, chapterOf, pageLabel } from '../src/ui/flow';
+import { Flow, ROMAN, SUSPECT_SHORT, Stage, chapterOf, pageLabel, resolveStage } from '../src/ui/flow';
 import { haptic } from '../src/ui/haptics';
 import { ChapterContext, T, Toast, ToastKind } from '../src/ui/kit';
 import { Pressable, Text } from 'react-native';
@@ -22,6 +22,7 @@ import { Arrived, Brief, Detect, Evidence, Navigate, Pocket, Viewfinder } from '
 import { Boot, Dossier, Terrain } from '../src/ui/screens/intro';
 import { Interrogation, Ring, SarahMessages, Threat, Walk } from '../src/ui/screens/people';
 import { Accuse, Verdict } from '../src/ui/screens/verdict';
+import { FalseLead, Witness } from '../src/ui/screens/leads';
 import { newTraits } from '../src/engine/appearance';
 import { Portrait, partsFor } from '../src/ui/portraits';
 import { SuspectId } from '../src/types/case';
@@ -79,7 +80,7 @@ export default function App() {
 
   function go(next: Stage) {
     Animated.timing(fade, { toValue: 0, duration: 180, easing: motion.easeInOut, useNativeDriver: motion.native }).start(() => {
-      setStage(next);
+      setStage(resolveStage(next, run.mode));
       Animated.timing(fade, { toValue: 1, duration: 420, easing: motion.ease, useNativeDriver: motion.native }).start();
     });
   }
@@ -191,7 +192,11 @@ function StageView({ flow }: { flow: Flow }) {
         />
       );
     case 'sarah':
-      return <SarahMessages flow={flow} next="mission2" />;
+      return <SarahMessages flow={flow} next="leadLeo" />;
+    case 'leadLeo':
+      return <FalseLead flow={flow} id="fl_leo_sms" next="paul" />;
+    case 'paul':
+      return <Witness flow={flow} id="paul" next="mission2" />;
     case 'mission2':
       return (
         <Brief
@@ -206,11 +211,15 @@ function StageView({ flow }: { flow: Flow }) {
         />
       );
     case 'capture2':
-      return <Viewfinder flow={flow} slot="WORLD_02" instruction="Un mot d’au moins 6 lettres." placeholder={flow.profile.word ?? 'PHARMACIE'} next="detect2" />;
+      return <Viewfinder flow={flow} slot="WORLD_02" instruction="Un mot d’au moins 6 lettres." placeholder={flow.profile.word ?? 'PHARMACIE'} next="detect2" fallbackNext="evidence2" />;
     case 'detect2':
       return <Detect flow={flow} next="evidence2" back="capture2" />;
     case 'evidence2':
-      return <Evidence flow={flow} id="e02" cta="Ouvrir le carnet" next="board" />;
+      return <Evidence flow={flow} id="e02" cta="Continuer" next="ticket" />;
+    case 'ticket':
+      return <Evidence flow={flow} id="e04" cta="Appeler le café" next="ines" />;
+    case 'ines':
+      return <Witness flow={flow} id="ines" next="board" />;
     case 'board':
       return <Board flow={flow} next="walk" />;
     case 'walk':
@@ -246,7 +255,28 @@ function StageView({ flow }: { flow: Flow }) {
         />
       );
     case 'evidence3':
-      return <Evidence flow={flow} id="e03" cta="Appeler Sarah" next="ringSarah" />;
+      return <Evidence flow={flow} id="e03" cta="Appeler Sarah" next="mission3" />;
+    case 'mission3':
+      return (
+        <Brief
+          flow={flow}
+          number="05"
+          title="La clé"
+          italic="de Nora."
+          quote="Le code est dans la rue. Comme toujours."
+          text={CASE_2317.worldSlots[2].prompt}
+          cta="Ouvrir l’objectif"
+          next="capture3"
+        />
+      );
+    case 'capture3':
+      return <Viewfinder flow={flow} slot="WORLD_03" instruction="Un nombre. Une porte, une rue, un horaire." placeholder="12" next="detect3" fallbackNext="evidence5" />;
+    case 'detect3':
+      return <Detect flow={flow} next="evidence5" back="capture3" />;
+    case 'evidence5':
+      return <Evidence flow={flow} id="e05" cta="Continuer" next="leadSarah" />;
+    case 'leadSarah':
+      return <FalseLead flow={flow} id="fl_sarah_mails" next="ringSarah" />;
     case 'ringSarah':
       return <Ring flow={flow} suspectId="sarah" next="callSarah" />;
     case 'callSarah': {
@@ -301,5 +331,5 @@ function ZoneReached({ flow }: { flow: Flow }) {
   useEffect(() => {
     if (!flow.run.flags.includes('ZONE_1_REACHED')) flow.apply({ type: 'SET_FLAG', flag: 'ZONE_1_REACHED' });
   }, []);
-  return <Viewfinder flow={flow} slot="WORLD_01" instruction="Une année. Quatre chiffres." placeholder={flow.profile.year ?? '1927'} next="detect1" />;
+  return <Viewfinder flow={flow} slot="WORLD_01" instruction="Une année. Quatre chiffres." placeholder={flow.profile.year ?? '1927'} next="detect1" fallbackNext="evidence1" />;
 }

@@ -10,7 +10,7 @@ import { color } from './theme';
 // Suspects are discovered layer by layer (hair, clothes, an accessory) as the investigation
 // finds photos, messages and witnesses. Never a face: the player imagines it, the voice does the rest.
 
-export type PortraitId = CharacterId | 'nora';
+export type PortraitId = CharacterId | 'nora' | 'ines' | 'paul';
 
 const SKIN = ['#5A616A', '#262B31'] as const;
 const CLOTH = ['#343A42', '#15181C'] as const;
@@ -130,6 +130,27 @@ const FIGURES: Record<PortraitId, (has: Has) => React.ReactElement> = {
       )}
     </>
   ),
+  // Witnesses: known from the start, they are not suspects.
+  ines: () => (
+    <>
+      {/* Ponytail and a waitress apron. */}
+      <Path d="M62 34 C74 38 74 58 66 66 C68 54 66 44 60 40 Z" fill={HAIR} />
+      <Base />
+      <Path d="M35 42 C33 24 67 24 65 42 C60 32 40 32 35 42 Z" fill={HAIR} />
+      <Path d="M36 80 L64 80 L66 100 L34 100 Z" fill={color.inkSoft} opacity={0.85} />
+      <Path d="M40 80 L44 72 M60 80 L56 72" stroke={color.inkSoft} strokeWidth={1.2} />
+    </>
+  ),
+  paul: () => (
+    <>
+      {/* Grey moustache, flat cap, sleeveless vest. */}
+      <Base />
+      <Path d="M44 70 L50 100 L56 70" stroke={color.faint} strokeWidth={1} fill="none" />
+      <Path d="M24 76 C30 72 38 70 44 70 L48 100 L20 100 Z M76 76 C70 72 62 70 56 70 L52 100 L80 100 Z" fill="#3A3F45" />
+      <Path d="M44 49 C47 47 53 47 56 49 L55 51 C52 50 48 50 45 51 Z" fill="#9A968F" />
+      <Path d="M34 34 C36 22 64 22 66 34 L72 36 C72 38 60 38 50 37 C42 37 34 37 34 34 Z" fill="#2B2F34" />
+    </>
+  ),
   unknown: () => (
     <>
       <Base />
@@ -213,6 +234,6 @@ export function Portrait({
 
 /** Layers the player has discovered for this person; undefined = always fully known. */
 export function partsFor(run: RunState, id: PortraitId): PortraitPart[] | undefined {
-  if (id === 'nora' || id === 'unknown') return undefined;
+  if (id !== 'leo' && id !== 'sarah' && id !== 'marc') return undefined;
   return revealedTraits(run, id).map((t) => t.part);
 }

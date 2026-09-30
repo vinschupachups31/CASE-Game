@@ -12,10 +12,9 @@ export function revealedTraits(run: RunState, suspectId: SuspectId, caseFile: Ca
   return caseFile.appearance[suspectId].filter((t) => check(t.revealWhen, run));
 }
 
-/** Traits this run can ever reveal: a trait tied to a long-mode element stays hidden in a short run. */
+/** Traits this run can ever reveal: a detail tied to a long-mode element stays hidden in a short run. */
 export function reachableTraits(run: RunState, suspectId: SuspectId, caseFile: CaseFile = CASE_2317): AppearanceTrait[] {
-  const longOnly = new Set(caseFile.evidence.filter((e) => !inMode(e.minMode, run.mode)).map((e) => e.id));
-  return caseFile.appearance[suspectId].filter((t) => !('evidence' in t.revealWhen && longOnly.has(t.revealWhen.evidence)));
+  return caseFile.appearance[suspectId].filter((t) => inMode(t.minMode, run.mode));
 }
 
 /** Details learned between two states of the run, for the "portrait updated" notice. */

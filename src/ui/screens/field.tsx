@@ -243,7 +243,22 @@ function Brackets({ w, h, tint = color.ink, len = 24 }: { w: number; h: number; 
   );
 }
 
-export function Viewfinder({ flow, slot, instruction, placeholder, next }: { flow: Flow; slot: WorldSlotKey; instruction: string; placeholder: string; next: Stage }) {
+export function Viewfinder({
+  flow,
+  slot,
+  instruction,
+  placeholder,
+  next,
+  fallbackNext,
+}: {
+  flow: Flow;
+  slot: WorldSlotKey;
+  instruction: string;
+  placeholder: string;
+  next: Stage;
+  /** Where "nothing like that around me" leads: the evidence, rebuilt from the fallback value. */
+  fallbackNext: Stage;
+}) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string>();
   const [permission, requestPermission] = useCameraPermissions();
@@ -310,7 +325,7 @@ export function Viewfinder({ flow, slot, instruction, placeholder, next }: { flo
         label="Rien de tel autour de moi"
         onPress={() => {
           flow.apply({ type: 'USE_FALLBACK', slot });
-          flow.go(slot === 'WORLD_01' ? 'evidence1' : 'evidence2');
+          flow.go(fallbackNext);
         }}
       />
     </Screen>
@@ -323,6 +338,7 @@ export function Detect({ flow, next, back }: { flow: Flow; next: Stage; back: St
   // Snapshot: the screen keeps rendering during the exit fade after pending is cleared.
   const [pending] = useState(flow.pending!);
   const isWord = pending.slot === 'WORLD_02';
+  const isNumber = pending.slot === 'WORLD_03';
   const clean = isWord ? lettersOnly(pending.raw) : pending.raw.trim();
   const lock = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -353,7 +369,7 @@ export function Detect({ flow, next, back }: { flow: Flow; next: Stage; back: St
       <Flex />
       <Reveal>
         <View style={{ alignItems: 'center' }}>
-          <Eyebrow red>{isWord ? 'Mot détecté' : 'Année détectée'}</Eyebrow>
+          <Eyebrow red>{isWord ? 'Mot détecté' : isNumber ? 'Nombre détecté' : 'Année détectée'}</Eyebrow>
         </View>
       </Reveal>
       <Spacer h={32} />
@@ -386,7 +402,11 @@ export function Detect({ flow, next, back }: { flow: Flow; next: Stage; back: St
       <Spacer h={32} />
       <Reveal delay={800}>
         <Text style={[T.body, { textAlign: 'center' }]}>
-          {isWord ? `Troisième lettre : ${clean[2]}.\nNora cachait ses codes ainsi.` : 'Une date inscrite dans ta ville.\nL’affaire va s’en souvenir.'}
+          {isWord
+            ? `Troisième lettre : ${clean[2]}.\nNora cachait ses codes ainsi.`
+            : isNumber
+              ? 'Un nombre de ta rue.\nC’était le mot de passe de sa clé.'
+              : 'Une date inscrite dans ta ville.\nL’affaire va s’en souvenir.'}
         </Text>
       </Reveal>
       <Spacer h={16} />
@@ -402,13 +422,15 @@ export function Detect({ flow, next, back }: { flow: Flow; next: Stage; back: St
 
 // ---------- Evidence: a file opens, line by line. ----------
 
-const HIGHLIGHT = /(LÉO VASSEUR|MARC DELCOURT|M\.D\.)/;
+const HIGHLIGHT = /(LÉO VASSEUR|MARC DELCOURT|M\.D\.|S\.K\.|Nora n’était pas seule\.)/;
 
 /** Which trace of the player's world each file carries (raw = the word itself, not its letter). */
 const TRACE: Record<string, { slot: WorldSlotKey; raw?: boolean }> = {
   e01: { slot: 'WORLD_01' },
   e02: { slot: 'WORLD_02', raw: true },
   e03: { slot: 'WORLD_02' },
+  e04: { slot: 'WORLD_01' },
+  e05: { slot: 'WORLD_03' },
 };
 
 export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta: string; next: Stage }) {
@@ -422,7 +444,8 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
     return () => clearTimeout(t);
   }, []);
   if (!file) return null;
-  const n = CASE_2317.evidence.findIndex((e) => e.id === id) + 1;
+  // Numbered in the order this player found them.
+  const n = flow.run.evidence.indexOf(id) + 1;
 
   return (
     <Screen progress={progressFor(flow)} footer={<Reveal delay={dramatic ? 3000 : 1600}><PrimaryButton label={cta} onPress={() => flow.go(next)} /></Reveal>}>
@@ -472,6 +495,24 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
             Marc <Text style={T.italic}>Delcourt.</Text>
           </Text>
           <Text style={T.body}>La source de Nora. Il dit vouloir aider.</Text>
+        </Reveal>
+      ) : id === 'e04' ? (
+        <Reveal delay={2400}>
+          <Eyebrow red>22:34</Eyebrow>
+          <Spacer h={8} />
+          <Text style={T.title}>
+            Deux cafés. <Text style={T.italic}>Avec qui ?</Text>
+          </Text>
+          <Text style={T.body}>Sept minutes avant 22:41. La serveuse s’en souvient peut-être.</Text>
+        </Reveal>
+      ) : id === 'e05' ? (
+        <Reveal delay={2400}>
+          <Eyebrow red>S.K.</Eyebrow>
+          <Spacer h={8} />
+          <Text style={T.title}>
+            Les fichiers venaient de <Text style={T.italic}>Sarah.</Text>
+          </Text>
+          <Text style={T.body}>Elle a dit ne rien savoir de l’enquête de Nora.</Text>
         </Reveal>
       ) : id === 'e03' ? (
         <Reveal delay={2400}>

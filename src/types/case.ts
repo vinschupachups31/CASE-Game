@@ -157,8 +157,14 @@ export type WitnessDef = {
   name: string;
   role: string;
   minMode: Mode;
-  /** What they tell the player; must agree with the canonical timeline. */
+  /** Designer summary; must agree with the canonical timeline. */
   testimony: string;
+  /** Where the player reaches them (by phone). */
+  place: string;
+  /** What they say, first person. */
+  lines: string[];
+  /** Flag set once the player has heard them. */
+  setsFlag: string;
 };
 
 /** A lead that points the wrong way. `why` records, for designers, why it is false. */
@@ -169,6 +175,10 @@ export type FalseLeadDef = {
   minMode: Mode;
   clue: string;
   why: string;
+  /** Who it seems to come from, as the player sees it. */
+  from: string;
+  /** Flag set once the player has seen it; the verdict explains the leads they followed. */
+  setsFlag: string;
 };
 
 /** Layer of a portrait. A portrait starts as a bare silhouette; each layer is discovered in play. */
@@ -183,6 +193,8 @@ export type AppearanceTrait = {
   /** Where it comes from, shown with the detail. */
   source: string;
   revealWhen: Condition;
+  /** Shortest mode in which this detail can be found (default: every mode). */
+  minMode?: Mode;
 };
 
 export type CaseFile = {
