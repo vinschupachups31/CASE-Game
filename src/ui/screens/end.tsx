@@ -4,6 +4,7 @@ import { chapterSummary, contradictionView } from '../../engine/gameEngine';
 import { investigatorProfile, nextUnlock, shareText } from '../../engine/profile';
 import { SuspectId } from '../../types/case';
 import { Flow, SUSPECT_SHORT } from '../flow';
+import { scheduleChapterNotification } from '../device';
 import { haptic } from '../haptics';
 import { Chip, Eyebrow, GhostButton, Hairline, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Counter, Reveal, WordReveal } from '../motion';
@@ -25,8 +26,18 @@ export function ChapterEnd({ flow }: { flow: Flow }) {
   const summary = chapterSummary(flow.run);
   const profile = investigatorProfile(flow.run);
   const contradictions = contradictionView(flow.run);
-  const [unlock] = useState(() => nextUnlock(new Date()));
+  const [unlock] = useState(() => nextUnlock(new Date(flow.endedAt ?? Date.now())));
   const countdown = useCountdown(unlock);
+  const open = countdown === '00:00:00';
+
+  // The appointment: a system notification at 07:42, even with the app closed.
+  useEffect(() => {
+    scheduleChapterNotification(unlock, 'CASE · Affaire 23:17', 'Chapitre II. Un fichier de Nora vient de refaire surface.');
+  }, []);
+  function openChapterTwo() {
+    flow.apply({ type: 'NEXT_CHAPTER' });
+    flow.go('chapter2');
+  }
   const vote = flow.run.flags.find((f) => f.startsWith('VOTE_'))?.slice(5).toLowerCase() as SuspectId | undefined;
 
   useEffect(() => {
@@ -126,21 +137,21 @@ export function ChapterEnd({ flow }: { flow: Flow }) {
 
         <Spacer h={48} />
         <View style={{ borderRadius: radius.l, borderWidth: 1, borderColor: color.lineHi, padding: 24 }}>
-          <Text style={T.label}>Chapitre II · ouverture dans</Text>
+          <Text style={[T.label, open && { color: color.red }]}>{open ? 'Chapitre II · ouvert' : 'Chapitre II · ouverture dans'}</Text>
           <Spacer h={8} />
           <Text style={[T.display, { fontFamily: T.monoL.fontFamily, letterSpacing: -2 }]} adjustsFontSizeToFit numberOfLines={1}>
             {countdown}
           </Text>
-          <Text style={T.caption}>Le prochain dossier arrive à 07:42. Garde ton téléphone près de toi.</Text>
+          <Text style={T.caption}>{open ? 'Le dossier est arrivé.' : 'Le prochain dossier arrive à 07:42. CASE te préviendra.'}</Text>
+          {open && (
+            <>
+              <Spacer h={16} />
+              <PrimaryButton tone="red" label="Ouvrir le chapitre II" onPress={openChapterTwo} />
+            </>
+          )}
         </View>
         {/* Playtests cannot wait for 07:42. */}
-        <GhostButton
-          label="Ouvrir le chapitre II maintenant"
-          onPress={() => {
-            flow.apply({ type: 'NEXT_CHAPTER' });
-            flow.go('chapter2');
-          }}
-        />
+        {!open && <GhostButton label="Mode test · ouvrir le chapitre II maintenant" onPress={openChapterTwo} />}
         <GhostButton label="Rejouer dans une autre ville" onPress={flow.restart} />
       </ScrollView>
     </Screen>

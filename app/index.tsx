@@ -11,6 +11,9 @@ import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import { CASE_2317 } from '../src/cases/23-17';
 import { createRun, isChapterComplete, reduceGame } from '../src/engine/gameEngine';
 import { PROFILES, Profile, simulate } from '../src/engine/simulator';
+import { buildTerrain } from '../src/engine/worldEngine';
+import { World } from '../src/ui/device';
+import { Saved, clearGame, loadGame, saveGame } from '../src/ui/save';
 import { GameEvent, RunMode, RunState } from '../src/types/run';
 import { Flow, ROMAN, SUSPECT_SHORT, Stage, chapterOf, pageLabel, resolveStage } from '../src/ui/flow';
 import { haptic } from '../src/ui/haptics';
@@ -57,7 +60,26 @@ export default function App() {
   const [toasts, setToasts] = useState<{ text: string; kind: ToastKind; id: number; who?: SuspectId }[]>([]);
   const toast = toasts[0];
 
-  const terrain = useMemo(() => simulate(profileId, run.mode), [profileId, run.mode]);
+  const [world, setWorld] = useState<World>();
+  const [endedAt, setEndedAt] = useState<number>();
+  const terrain = useMemo(() => (world ? buildTerrain(world.places, run.mode) : simulate(profileId, run.mode)), [world, profileId, run.mode]);
+
+  // Save and resume: closing the app never loses the investigation.
+  const [saved, setSaved] = useState<Saved>();
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    loadGame().then((s) => {
+      if (s && s.stage !== 'boot') setSaved(s);
+      setLoaded(true);
+    });
+  }, []);
+  useEffect(() => {
+    if (stage === 'end' && !endedAt) setEndedAt(Date.now());
+  }, [stage]);
+  useEffect(() => {
+    if (!loaded || stage === 'boot') return;
+    saveGame({ v: 1, run, stage, profileId, world, capturedAt, endedAt });
+  }, [loaded, run, stage, profileId, world, capturedAt, endedAt]);
   // Scene transitions: a soft dissolve with depth by default, a hard cut for what should startle.
   const reduced = useReducedMotion();
   const scene = useSharedValue(1);
@@ -118,10 +140,30 @@ export default function App() {
     setPending,
     capturedAt,
     markCaptured: () => setCapturedAt(Date.now()),
+    world,
+    setWorld,
+    saved: saved && { stage: saved.stage, chapter: saved.run.chapter },
+    resume: () => {
+      if (!saved) return;
+      prev.current = saved.run; // no replay of old notices
+      setRun(saved.run);
+      setProfileId(saved.profileId);
+      setWorld(saved.world);
+      setCapturedAt(saved.capturedAt);
+      setEndedAt(saved.endedAt);
+      setSaved(undefined);
+      go(saved.stage);
+    },
+    endedAt,
     restart: () => {
+      clearGame();
+      setEndedAt(undefined);
+      setSaved(undefined);
+      prev.current = createRun();
       setRun(createRun());
       setPending(undefined);
       setCapturedAt(undefined);
+      setWorld(undefined);
       setProfileId((p) => PROFILE_ORDER[(PROFILE_ORDER.indexOf(p) + 1) % PROFILE_ORDER.length]);
       go('boot');
     },

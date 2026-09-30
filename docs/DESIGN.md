@@ -65,9 +65,13 @@ Les témoins se joignent par téléphone et parlent ligne par ligne (voix enregi
 4. **Rendez-vous quotidien** : le chapitre suivant ouvre à 07:42, l’heure de réception du dossier, avec un compte à rebours.
 5. **Personnages qui se souviennent** : ignorer Sarah est enregistré (« Sarah s’en souviendra. »).
 
+## Fait
+- GPS et boussole réels : lieux publics lus sur OpenStreetMap, distance et direction en direct, arrivée détectée à 60 m (vibration). Repli automatique sur la simulation.
+- Notification système pour le rendez-vous de 07:42 ; le chapitre II s'ouvre seul à l'heure dite.
+- Sauvegarde et reprise de la partie.
+
 ## À venir
-- Lecture automatique des photos (Vision Engine) : aujourd’hui, le joueur recopie ce qu’il voit sous l’objectif.
-- GPS et boussole réels. L’arrivée en zone est simulée.
-- Voix réelles des personnages et IA côté serveur.
-- Notifications système pour le rendez-vous de 07:42.
+- Voix enregistrées (ElevenLabs) : pipeline prêt (`npm run voices`), en attente de l'accès réseau et du choix des voix.
+- Lecture automatique des photos (Vision Engine) : le joueur recopie encore ce qu'il voit sous l'objectif. Nécessite un module natif de reconnaissance de texte (build de développement).
+- IA côté serveur pour les personnages (le contexte borné et le garde-fou existent déjà dans `characterEngine.ts`).
 - Comparaison des codes et des votes entre joueurs (nécessite un serveur ; aucune statistique inventée d’ici là).

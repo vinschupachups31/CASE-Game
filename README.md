@@ -20,12 +20,14 @@ La vérité criminelle est immuable. Le World Engine adapte les lieux et certain
 ## Lancer
 ```bash
 npm install
-npx expo start      # app (ou: npm run web)
+npx expo start      # puis scanner le QR code avec Expo Go (iOS / Android)
+npm run web         # version navigateur
+npm run demo        # page HTML autonome : dist-demo/case-demo.html
 npm test            # moteurs (Vitest)
 npm run typecheck   # TypeScript
 ```
 
-Le prototype inclut un mode de simulation (ville dense, petite ville, zone rurale) afin de tester le moteur sans GPS ni caméra réels.
+Sur téléphone, CASE lit ton vrai terrain : GPS + lieux publics OpenStreetMap (sans clé ni compte), boussole et distance en direct, vibration à l'arrivée dans la zone. Sans localisation, sans réseau ou sur le web sans autorisation, l'enquête bascule automatiquement sur un environnement simulé (ville dense, petite ville, zone rurale). La partie est sauvegardée : on la reprend depuis l'écran d'accueil. Le chapitre II ouvre au 07:42 suivant, avec une notification du téléphone.
 
 ## Architecture
 ```
@@ -45,6 +47,9 @@ src/
     ├── characterEngine.ts   contexte borné pour une IA backend + garde-fou des réponses
     ├── notebook.ts          carnet : FAIT ÉTABLI vs HYPOTHÈSE
     ├── profile.ts           profil d’enquêteur, texte de partage, rendez-vous 07:42
+    ├── geo.ts               distance, cap, aiguille relative à la boussole
+    ├── places.ts            lieux publics réels (OpenStreetMap / Overpass), filtre de sécurité
+    ├── appearance.ts        portraits découverts au fil de l’enquête
     └── simulator.ts         partie scriptée dans plusieurs environnements
 ```
 

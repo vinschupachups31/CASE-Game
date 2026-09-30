@@ -17,6 +17,9 @@ export type Candidate = {
   public: boolean;
   /** Private property, abandoned building, dangerous crossing… never used. */
   unsafe?: boolean;
+  /** Real coordinates, when the place comes from the map (live distance and arrival). */
+  lat?: number;
+  lon?: number;
 };
 
 export type Purpose = 'trace' | 'world_challenge' | 'confrontation' | 'finale';

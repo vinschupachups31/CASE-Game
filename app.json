@@ -1,1 +1,61 @@
-{"expo":{"name":"CASE","slug":"case-game","scheme":"case","version":"0.1.0","orientation":"portrait","userInterfaceStyle":"dark","plugins":["expo-router","expo-location","expo-camera"],"experiments":{"typedRoutes":true}}}
+{
+  "expo": {
+    "name": "CASE",
+    "slug": "case-game",
+    "scheme": "case",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#07080A",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.case.game"
+    },
+    "android": {
+      "package": "com.case.game",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CASE lit les lieux publics autour de toi pour construire l’enquête, et te guide jusqu’à la zone de recherche.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CASE utilise l’objectif pour lire ce que tu trouves dans ta ville : une année, un mot, un nombre.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "CASE utilise les mouvements du téléphone pour animer les preuves."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E5484D"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -3,7 +3,9 @@ import { Animated, Platform, Pressable, StyleSheet, Text, TextInput, View } from
 import { CASE_2317 } from '../../cases/23-17';
 import { lettersOnly, validateForSlot } from '../../engine/challengeEngine';
 import { evidenceView } from '../../engine/gameEngine';
-import { compass } from '../../engine/worldEngine';
+import { Candidate, compass, inSearchZone } from '../../engine/worldEngine';
+import { bearingDeg, distanceM, relativeBearing } from '../../engine/geo';
+import { useHeading, useLivePosition } from '../device';
 import { WorldSlotKey } from '../../types/case';
 import { Flow, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
@@ -80,16 +82,29 @@ export function Brief({
 
 const progressFor = (flow: Flow) => progressOf(flow.stage);
 
+/** Distance and bearing to a real place, updated as the player walks. Undefined for simulated places. */
+function useLiveTarget(place?: Candidate) {
+  const real = place?.lat !== undefined && place?.lon !== undefined;
+  const pos = useLivePosition(real);
+  if (!real || !pos) return undefined;
+  const to = { lat: place!.lat!, lon: place!.lon! };
+  return { distance: distanceM(pos, to), bearing: bearingDeg(pos, to) };
+}
+
 // ---------- Navigate: direction + distance, no map pin. ----------
 
 export function Navigate({ flow, stopIndex, label, next }: { flow: Flow; stopIndex: number; label: string; next: Stage }) {
   const stop = flow.terrain.stops[stopIndex];
   const place = stop.type === 'place' ? stop.place : undefined;
-  const bearing = place?.bearingDeg ?? 0;
+  // Real place: live distance and direction from where the player stands, turned by the compass.
+  const live = useLiveTarget(place);
+  const heading = useHeading(!!live);
+  const bearing = live ? (heading !== undefined ? relativeBearing(live.bearing, heading) : live.bearing) : place?.bearingDeg ?? 0;
+  const distance = live?.distance ?? place?.distanceM ?? 0;
   const rot = useRef(new Animated.Value(-120)).current;
   useEffect(() => {
-    Animated.spring(rot, { toValue: bearing, useNativeDriver: motion.native, speed: 2, bounciness: 6 }).start();
-  }, []);
+    Animated.spring(rot, { toValue: bearing, useNativeDriver: motion.native, speed: heading !== undefined ? 12 : 2, bounciness: 6 }).start();
+  }, [bearing]);
   const size = 248;
   return (
     <Screen progress={progressFor(flow)} footer={<PrimaryButton label={place ? 'J’y vais' : 'Chercher ici'} onPress={() => flow.go(next)} />}>
@@ -113,10 +128,13 @@ export function Navigate({ flow, stopIndex, label, next }: { flow: Flow; stopInd
         {place ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-              <Counter to={place.distanceM} duration={1400} style={T.display} />
+              <Counter to={distance} duration={1400} style={T.display} />
               <Text style={[T.mono, { marginBottom: 12 }]}>MÈTRES</Text>
             </View>
-            <Text style={[T.label, { color: color.ink, marginTop: 8 }]}>{DIRECTION[compass(bearing)]}</Text>
+            <Text style={[T.label, { color: color.ink, marginTop: 8 }]}>
+              {heading !== undefined ? (Math.abs(bearing) < 20 ? 'Droit devant' : bearing > 0 ? 'Sur ta droite' : 'Sur ta gauche') : DIRECTION[compass(live?.bearing ?? bearing)]}
+            </Text>
+            {live && <Text style={[T.mono, { marginTop: 8 }]}>{place.name.toUpperCase()}</Text>}
           </>
         ) : (
           <Text style={T.display}>Ici.</Text>
@@ -136,6 +154,16 @@ export function Navigate({ flow, stopIndex, label, next }: { flow: Flow; stopInd
 // ---------- Pocket: the phone leaves the player's hands. ----------
 
 export function Pocket({ flow, next }: { flow: Flow; next: Stage }) {
+  // With a real place, CASE watches the GPS and calls the player back on arrival.
+  const stop = flow.terrain.stops[0];
+  const live = useLiveTarget(stop.type === 'place' ? stop.place : undefined);
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (!live || arrived.current || !inSearchZone(live.distance)) return;
+    arrived.current = true;
+    haptic.heartbeat();
+    flow.go(next);
+  }, [live?.distance]);
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -154,7 +182,7 @@ export function Pocket({ flow, next }: { flow: Flow; next: Stage }) {
      
       footer={
         <GhostButton
-          label="Prototype · simuler l’arrivée"
+          label={live ? `Je suis dans la zone · ${live.distance} m` : 'Prototype · simuler l’arrivée'}
           onPress={() => {
             haptic.heartbeat();
             flow.go(next);

@@ -6,7 +6,8 @@ import { modeScope } from '../../engine/modes';
 import { RunMode } from '../../types/run';
 import { Portrait } from '../portraits';
 import { Halo, MaskReveal, Scramble, Tilt } from '../fx';
-import { Flow } from '../flow';
+import { Flow, STAGE_NAMES } from '../flow';
+import { readSurroundings } from '../device';
 import { haptic } from '../haptics';
 import { PlayIcon, ShieldIcon } from '../icons';
 import { Eyebrow, Flex, GhostButton, Hairline, PrimaryButton, Screen, Segmented, Spacer, T } from '../kit';
@@ -26,7 +27,14 @@ export function Boot({ flow }: { flow: Flow }) {
       bare
       footer={
         <Reveal delay={2200}>
-          <PrimaryButton label="Ouvrir le dossier" onPress={() => flow.go('dossier')} />
+          {flow.saved ? (
+            <>
+              <PrimaryButton label="Reprendre l’enquête" onPress={flow.resume} />
+              <GhostButton label="Nouvelle enquête" onPress={flow.restart} />
+            </>
+          ) : (
+            <PrimaryButton label="Ouvrir le dossier" onPress={() => flow.go('dossier')} />
+          )}
         </Reveal>
       }
     >
@@ -47,8 +55,12 @@ export function Boot({ flow }: { flow: Flow }) {
             <Text style={T.mono}>maintenant</Text>
           </View>
           <Spacer h={16} />
-          <Text style={T.bodyStrong}>Dossier reçu</Text>
-          <Text style={T.body}>Une affaire t’a été assignée. Ouvre-la seul.</Text>
+          <Text style={T.bodyStrong}>{flow.saved ? 'Enquête en cours' : 'Dossier reçu'}</Text>
+          <Text style={T.body}>
+            {flow.saved
+              ? `Chapitre ${flow.saved.chapter === 1 ? 'I' : 'II'} · ${STAGE_NAMES[flow.saved.stage]}. Nora attend toujours.`
+              : 'Une affaire t’a été assignée. Ouvre-la seul.'}
+          </Text>
         </View>
         </Tilt>
       </Reveal>
@@ -166,12 +178,30 @@ const MODE_INFO: Record<RunMode, { pitch: string; detail: string }> = {
 
 export function Terrain({ flow }: { flow: Flow }) {
   const [scanning, setScanning] = useState(true);
-  useEffect(() => {
-    const t = setTimeout(() => {
+  const [status, setStatus] = useState<'gps' | 'simulated' | 'denied' | 'offline'>(flow.world ? 'gps' : 'simulated');
+
+  // Reads the real surroundings (GPS + OpenStreetMap). Any failure falls back to the simulation:
+  // the investigation never waits on a signal.
+  async function read() {
+    setScanning(true);
+    const started = Date.now();
+    let next: typeof status = 'simulated';
+    try {
+      flow.setWorld(await readSurroundings());
+      next = 'gps';
+    } catch (e) {
+      next = e instanceof Error && e.message === 'permission' ? 'denied' : 'offline';
+      flow.setWorld(undefined);
+    }
+    // The scan is also a moment: it lasts at least as long as its animation.
+    setTimeout(() => {
+      setStatus(next);
       setScanning(false);
       haptic.confirm();
-    }, 2400);
-    return () => clearTimeout(t);
+    }, Math.max(0, 2400 - (Date.now() - started)));
+  }
+  useEffect(() => {
+    read();
   }, []);
 
   if (scanning) {
@@ -271,7 +301,24 @@ export function Terrain({ flow }: { flow: Flow }) {
           <ShieldIcon />
           <Text style={[T.caption, { flex: 1 }]}>Espaces publics uniquement. Aucune propriété privée. Reste attentif à la circulation.</Text>
         </View>
-        <GhostButton align="left" label={`Environnement simulé : ${flow.profile.label.toLowerCase()} ↻`} onPress={flow.cycleProfile} />
+        {status === 'gps' ? (
+          <>
+            <Text style={[T.mono, { marginTop: 8 }]}>AUTOUR DE TOI · GPS + OPENSTREETMAP</Text>
+            <GhostButton align="left" label="Tester sans bouger : environnement simulé" onPress={() => { flow.setWorld(undefined); setStatus('simulated'); }} />
+          </>
+        ) : (
+          <>
+            <Text style={[T.caption, { marginTop: 8 }]}>
+              {status === 'denied'
+                ? 'Localisation refusée : l’enquête se joue dans un environnement simulé.'
+                : status === 'offline'
+                  ? 'Carte indisponible (réseau ou GPS) : environnement simulé.'
+                  : 'Environnement simulé.'}
+            </Text>
+            <GhostButton align="left" label={`Environnement simulé : ${flow.profile.label.toLowerCase()} ↻`} onPress={flow.cycleProfile} />
+            <GhostButton align="left" label="Lire mon vrai terrain" onPress={read} />
+          </>
+        )}
       </ScrollView>
     </Screen>
   );

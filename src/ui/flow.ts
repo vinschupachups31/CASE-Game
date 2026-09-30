@@ -3,6 +3,7 @@ import { GameEvent, RunMode, RunState } from '../types/run';
 import { Profile } from '../engine/simulator';
 import { Terrain } from '../engine/worldEngine';
 import { inMode } from '../engine/modes';
+import type { World } from './device';
 
 /** Chapter I, beat by beat. Each stage is one screen with one main action. */
 export const STAGES = [
@@ -149,6 +150,14 @@ export type Flow = {
   capturedAt?: number;
   markCaptured: () => void;
   restart: () => void;
+  /** Real surroundings (GPS + map); undefined = simulated environment. */
+  world?: World;
+  setWorld: (w?: World) => void;
+  /** A saved investigation found at launch, offered on the first screen. */
+  saved?: { stage: Stage; chapter: number };
+  resume: () => void;
+  /** When chapter I ended (the 07:42 appointment is computed from it). */
+  endedAt?: number;
 };
 
 export const SUSPECT_SHORT: Record<SuspectId, string> = { leo: 'Léo', sarah: 'Sarah', marc: 'Marc' };
