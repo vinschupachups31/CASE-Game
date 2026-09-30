@@ -8,7 +8,7 @@ import { Flow, SUSPECT_SHORT, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
 import { Eyebrow, Flex, GhostButton, Hairline, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Reveal, WordReveal } from '../motion';
-import { Portrait } from '../portraits';
+import { Portrait, partsFor } from '../portraits';
 import { color, radius } from '../theme';
 
 // Rule 7: an accusation needs a person AND a proof. The player chooses both; the engine judges.
@@ -74,7 +74,7 @@ export function Accuse({ flow, next }: { flow: Flow; next: Stage }) {
                     backgroundColor: on ? color.redSoft : color.surface,
                   }}
                 >
-                  <Portrait id={s.id} size={48} ring={on ? color.red : color.lineHi} />
+                  <Portrait id={s.id} size={48} parts={partsFor(flow.run, s.id)} ring={on ? color.red : color.lineHi} />
                   <View style={{ flex: 1, paddingVertical: 12 }}>
                     <Text style={T.bodyStrong}>{s.name}</Text>
                     <Text style={T.caption}>{s.role}</Text>

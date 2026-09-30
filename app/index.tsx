@@ -10,7 +10,7 @@ import { CASE_2317 } from '../src/cases/23-17';
 import { createRun, isChapterComplete, reduceGame } from '../src/engine/gameEngine';
 import { PROFILES, Profile, simulate } from '../src/engine/simulator';
 import { GameEvent, RunMode, RunState } from '../src/types/run';
-import { Flow, ROMAN, Stage, chapterOf, pageLabel } from '../src/ui/flow';
+import { Flow, ROMAN, SUSPECT_SHORT, Stage, chapterOf, pageLabel } from '../src/ui/flow';
 import { haptic } from '../src/ui/haptics';
 import { ChapterContext, T, Toast, ToastKind } from '../src/ui/kit';
 import { Pressable, Text } from 'react-native';
@@ -22,6 +22,9 @@ import { Arrived, Brief, Detect, Evidence, Navigate, Pocket, Viewfinder } from '
 import { Boot, Dossier, Terrain } from '../src/ui/screens/intro';
 import { Interrogation, Ring, SarahMessages, Threat, Walk } from '../src/ui/screens/people';
 import { Accuse, Verdict } from '../src/ui/screens/verdict';
+import { newTraits } from '../src/engine/appearance';
+import { Portrait, partsFor } from '../src/ui/portraits';
+import { SuspectId } from '../src/types/case';
 import { CALL_OPENINGS } from '../src/voice/lines';
 
 const PROFILE_ORDER: Profile['id'][] = ['dense', 'small', 'rural'];
@@ -47,23 +50,31 @@ export default function App() {
   const [stage, setStage] = useState<Stage>('boot');
   const [pending, setPending] = useState<Flow['pending']>();
   const [capturedAt, setCapturedAt] = useState<number>();
-  const [toast, setToast] = useState<{ text: string; kind: ToastKind; id: number }>();
+  // Notices queue up: a contradiction and a new portrait detail can land on the same answer.
+  const [toasts, setToasts] = useState<{ text: string; kind: ToastKind; id: number; who?: SuspectId }[]>([]);
+  const toast = toasts[0];
 
   const terrain = useMemo(() => simulate(profileId, run.mode), [profileId, run.mode]);
   const fade = useRef(new Animated.Value(1)).current;
 
-  // Feedback on what the engine just learned: statements, contradictions, suspects.
+  // Feedback on what the engine just learned: contradictions, portrait details, statements.
   const prev = useRef(run);
   useEffect(() => {
     const before = prev.current;
     prev.current = run;
-    const newContradiction = run.contradictions.find((c) => !before.contradictions.includes(c));
-    if (newContradiction) {
-      const def = CASE_2317.contradictions.find((c) => c.id === newContradiction)!;
-      haptic.warning();
-      return setToast({ text: def.level === 'established' ? 'Contradiction établie' : 'Contradiction potentielle', kind: 'alert', id: Date.now() });
+    const notices: typeof toasts = [];
+    const stamp = Date.now();
+    for (const id of run.contradictions.filter((c) => !before.contradictions.includes(c))) {
+      const def = CASE_2317.contradictions.find((c) => c.id === id)!;
+      notices.push({ text: def.level === 'established' ? 'Contradiction établie' : 'Contradiction potentielle', kind: 'alert', id: stamp + notices.length });
     }
-    if (run.statements.length > before.statements.length) setToast({ text: 'Déclaration enregistrée', kind: 'info', id: Date.now() });
+    for (const { suspectId, trait } of newTraits(before, run)) {
+      notices.push({ text: `Portrait de ${SUSPECT_SHORT[suspectId]} · ${trait.label}`, kind: 'info', id: stamp + notices.length, who: suspectId });
+    }
+    if (!notices.length && run.statements.length > before.statements.length) notices.push({ text: 'Déclaration enregistrée', kind: 'info', id: stamp });
+    if (!notices.length) return;
+    notices[0].kind === 'alert' ? haptic.warning() : haptic.confirm();
+    setToasts((q) => [...q, ...notices]);
   }, [run]);
 
   function go(next: Stage) {
@@ -113,7 +124,15 @@ export default function App() {
           </Text>
           <VoiceSwitch />
         </View>
-        {toast && <Toast key={toast.id} text={toast.text} kind={toast.kind} onHide={() => setToast(undefined)} />}
+        {toast && (
+          <Toast
+            key={toast.id}
+            text={toast.text}
+            kind={toast.kind}
+            leading={toast.who && <Portrait id={toast.who} size={32} parts={partsFor(run, toast.who)} />}
+            onHide={() => setToasts((q) => q.slice(1))}
+          />
+        )}
       </View>
     </SafeAreaProvider>
   );

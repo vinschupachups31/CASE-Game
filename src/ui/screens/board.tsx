@@ -7,7 +7,7 @@ import { Flow, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
 import { Eyebrow, Flex, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Reveal } from '../motion';
-import { Portrait, PortraitId } from '../portraits';
+import { Portrait, PortraitId, partsFor } from '../portraits';
 import { color } from '../theme';
 
 // Spatial, minimal, tactile. Not a wall of red strings: a few nodes, lines that mean something.
@@ -92,7 +92,7 @@ export function Board({ flow, next, cta = 'Reprendre la route' }: { flow: Flow; 
               onPress={() => tap(id)}
               style={{ position: 'absolute', left: p.x - NODE / 2, top: p.y - NODE / 2, width: NODE, alignItems: 'center' }}
             >
-              <Portrait id={id as PortraitId} size={NODE} dim={!node} ring={on ? color.ink : id === 'nora' ? color.redLine : color.lineHi} />
+              <Portrait id={id as PortraitId} size={NODE} dim={!node} parts={partsFor(flow.run, id as PortraitId)} ring={on ? color.ink : id === 'nora' ? color.redLine : color.lineHi} />
               <Text style={[T.label, { letterSpacing: 1, marginTop: 4, color: on ? color.ink : node ? color.inkSoft : color.faint }]}>{node?.label ?? '?'}</Text>
             </Pressable>
           );

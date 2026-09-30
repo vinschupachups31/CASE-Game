@@ -224,7 +224,7 @@ export function Segmented<K extends string>({ options, value, onChange }: { opti
 export type ToastKind = 'info' | 'alert';
 
 /** Slides down from the top: "Déclaration enregistrée", "Contradiction potentielle". */
-export function Toast({ text, kind, onHide }: { text: string; kind: ToastKind; onHide: () => void }) {
+export function Toast({ text, kind, onHide, leading }: { text: string; kind: ToastKind; onHide: () => void; leading?: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -255,7 +255,7 @@ export function Toast({ text, kind, onHide }: { text: string; kind: ToastKind; o
         transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }],
       }}
     >
-      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: kind === 'alert' ? color.red : color.ink }} />
+      {leading ?? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: kind === 'alert' ? color.red : color.ink }} />}
       <Text style={[T.label, { color: kind === 'alert' ? color.red : color.ink, flex: 1 }]}>
         {text}
       </Text>

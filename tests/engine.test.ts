@@ -347,3 +347,37 @@ describe('Chapitre II — accusation', () => {
     expect(startCall('sarah', 0, true).trust).toBeLessThan(startCall('sarah').trust);
   });
 });
+
+describe('Portraits — découverts au fil de l’enquête', () => {
+  it('un suspect inconnu n’a aucun détail ; la photo de contact révèle les cheveux de Léo', async () => {
+    const { revealedTraits } = await import('../src/engine/appearance');
+    expect(revealedTraits(createRun(), 'leo')).toEqual([]);
+    expect(revealedTraits(afterYear(), 'leo').map((t) => t.id)).toEqual(['leo_hair']);
+  });
+
+  it('répondre à Sarah est récompensé : elle décrit le sweat de Léo', async () => {
+    const { newTraits } = await import('../src/engine/appearance');
+    let run = afterYear();
+    for (const e of ask(run, 'leo', 'Où étiez-vous après l’appel ?').events) run = reduceGame(run, e);
+    const answered = reduceGame(run, { type: 'SET_FLAG', flag: 'SARAH_ANSWERED' });
+    expect(newTraits(run, answered).map((n) => n.trait.id)).toEqual(['leo_hoodie']);
+    expect(newTraits(run, reduceGame(run, { type: 'SET_FLAG', flag: 'SARAH_IGNORED' }))).toEqual([]);
+  });
+
+  it('en fin de partie, chaque portrait est complet selon le mode', async () => {
+    const { revealedTraits, reachableTraits } = await import('../src/engine/appearance');
+    let run = playthrough('dense', 'marc', 'normal').run;
+    run = reduceGame(run, { type: 'SET_FLAG', flag: 'SARAH_CONFESSED' });
+    run = reduceGame(run, { type: 'SET_FLAG', flag: 'LEO_OPENED_UP' });
+    for (const id of ['leo', 'sarah', 'marc'] as const) expect(revealedTraits(run, id)).toHaveLength(reachableTraits(run, id).length);
+    const short = playthrough('dense', 'marc', 'short').run;
+    expect(reachableTraits(short, 'marc').map((t) => t.id)).not.toContain('marc_watch');
+  });
+
+  it('chaque détail a une source et une partie de portrait distincte', () => {
+    for (const traits of Object.values(CASE_2317.appearance)) {
+      expect(new Set(traits.map((t) => t.part)).size).toBe(traits.length);
+      for (const t of traits) expect(t.source.length).toBeGreaterThan(10);
+    }
+  });
+});

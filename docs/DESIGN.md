@@ -16,8 +16,17 @@ Référence : skill `.claude/skills/mobile-app-ui-design` (règles 60/30/10, gri
 - Le carnet est spatial : 4 nœuds, trait plein = fait établi, pointillé rouge = hypothèse.
 - Retours immédiats : notifications en haut d’écran (« Déclaration enregistrée », « Contradiction potentielle ») avec vibrations dédiées.
 
-## Portraits (`src/ui/portraits.tsx`)
-Silhouettes sans visage, éclairées par la gauche comme une photo de dossier. Chaque personnage se lit à un seul trait : l’écharpe rouge de Nora, la capuche de Léo, les lunettes et le chignon de Sarah, le costume et la cravate de Marc, un « ? » rouge pour le numéro inconnu. Le joueur imagine le visage ; la voix fait le reste.
+## Portraits découverts (`src/ui/portraits.tsx`, `src/engine/appearance.ts`)
+Silhouettes sans visage, éclairées par la gauche comme une photo de dossier. Nora est connue dès le dossier (écharpe rouge) ; le numéro inconnu reste un « ? » rouge.
+Les suspects **se découvrent** : chacun commence en silhouette nue, puis gagne trois calques (coiffure, haut, accessoire). Chaque détail vient d'une source concrète, déclarée dans le Case File (`appearance`) :
+
+| Suspect | Coiffure | Haut | Accessoire |
+|---|---|---|---|
+| Léo | photo de contact floue (preuve 01) | sweat gris : Sarah, si on lui a répondu | écouteurs : l'appel, s'il se confie |
+| Sarah | photo de profil (son message) | badge de presse : ses aveux | lunettes : note de Nora (preuve 03) |
+| Marc | tempes grises : sa voix | costume, cravate : archives du journal | montre en or : Inès (mode normal et +) |
+
+Certains détails récompensent un choix (répondre à Sarah, mettre Léo en confiance) ; les modes longs en révèlent plus. Chaque découverte déclenche une notification « Portrait de Léo · Sweat gris à capuche ». L'écran d'appel affiche « PORTRAIT 2/3 » et les détails connus ; au verdict, le portrait de l'accusé apparaît en entier.
 
 ## Moments clés
 - **Pic** : le numéro inconnu. Écran noir, vibration, léger glitch, la valeur trouvée par le joueur soulignée en rouge, puis « Tu as trouvé 1927 il y a 6 min. » et l’appel de Marc qui suit sans transition.

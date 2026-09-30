@@ -28,6 +28,7 @@ export type Condition =
   | { statement: string }
   | { message: string }
   | { suspect: SuspectId }
+  | { contradiction: string }
   | { chapter: number };
 
 export type Fact = { id: string; text: string };
@@ -170,6 +171,20 @@ export type FalseLeadDef = {
   why: string;
 };
 
+/** Layer of a portrait. A portrait starts as a bare silhouette; each layer is discovered in play. */
+export type PortraitPart = 'hair' | 'top' | 'accessory';
+
+/** A visible detail of a person, learned from a concrete source (a photo, a message, a witness). */
+export type AppearanceTrait = {
+  id: string;
+  part: PortraitPart;
+  /** What the player now knows, e.g. "Sweat gris à capuche". */
+  label: string;
+  /** Where it comes from, shown with the detail. */
+  source: string;
+  revealWhen: Condition;
+};
+
 export type CaseFile = {
   id: string;
   title: string;
@@ -188,4 +203,5 @@ export type CaseFile = {
   witnesses: WitnessDef[];
   falseLeads: FalseLeadDef[];
   accusation: { requiredEvidence: string[]; requiredContradictions: string[] };
+  appearance: Record<SuspectId, AppearanceTrait[]>;
 };

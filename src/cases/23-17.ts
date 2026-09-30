@@ -254,6 +254,7 @@ export const CASE_2317: CaseFile = deepFreeze({
         minTrust: 40,
         patterns: ['appel', '21.?53', 'telephone'],
         answer: 'Oui, elle m’a appelé. Elle avait peur de quelque chose. Elle n’a pas voulu dire quoi.',
+        setsFlag: 'LEO_OPENED_UP',
       },
       {
         id: 'leo_follow',
@@ -429,4 +430,78 @@ export const CASE_2317: CaseFile = deepFreeze({
   ],
 
   accusation: { requiredEvidence: ['e02', 'e03'], requiredContradictions: ['c_marc_sarah'] },
+
+  // ---- PROPOSITION (à valider) : apparence des suspects, découverte au fil de l'enquête ----
+  // Chaque détail vient d'une source concrète. Aucun ne change la vérité ; les modes longs en révèlent plus.
+  appearance: {
+    leo: [
+      {
+        id: 'leo_hair',
+        part: 'hair',
+        label: 'Cheveux en bataille',
+        source: 'Photo de contact dans le téléphone de Nora. Floue.',
+        revealWhen: { evidence: 'e01' },
+      },
+      {
+        id: 'leo_hoodie',
+        part: 'top',
+        label: 'Sweat gris à capuche',
+        source: 'Sarah : « Toujours le même sweat gris. On le repère de loin. »',
+        revealWhen: { any: [{ flag: 'SARAH_ANSWERED' }, { flag: 'SARAH_CONFESSED' }] },
+      },
+      {
+        id: 'leo_earbuds',
+        part: 'accessory',
+        label: 'Écouteurs filaires',
+        source: 'Pendant l’appel, un frottement de fil contre le micro. Il ne les quitte jamais.',
+        revealWhen: { flag: 'LEO_OPENED_UP' },
+      },
+    ],
+    sarah: [
+      {
+        id: 'sarah_hair',
+        part: 'hair',
+        label: 'Chignon serré',
+        source: 'Photo de profil de sa messagerie.',
+        revealWhen: { message: 'sarah_01' },
+      },
+      {
+        id: 'sarah_glasses',
+        part: 'accessory',
+        label: 'Lunettes fines',
+        source: 'Note de Nora : « S. relit tout deux fois, lunettes sur le nez. »',
+        revealWhen: { evidence: 'e03' },
+      },
+      {
+        id: 'sarah_badge',
+        part: 'top',
+        label: 'Veste et badge de presse',
+        source: 'Sarah : « On travaille au même journal. Mon badge ouvre toutes les portes. »',
+        revealWhen: { flag: 'SARAH_CONFESSED' },
+      },
+    ],
+    marc: [
+      {
+        id: 'marc_hair',
+        part: 'hair',
+        label: 'Tempes grises',
+        source: 'Sa voix au téléphone : posée, la cinquantaine.',
+        revealWhen: { message: 'marc_01' },
+      },
+      {
+        id: 'marc_suit',
+        part: 'top',
+        label: 'Costume sombre, cravate',
+        source: 'Archives du journal, transmises par Sarah : Marc à une conférence. Costume sombre, cravate.',
+        revealWhen: { flag: 'SARAH_CONFESSED' },
+      },
+      {
+        id: 'marc_watch',
+        part: 'accessory',
+        label: 'Montre en or',
+        source: 'Inès, serveuse au Café du Marché : « Une belle montre. Il regardait l’heure sans arrêt. »',
+        revealWhen: { evidence: 'e04' },
+      },
+    ],
+  },
 });

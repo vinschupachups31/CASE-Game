@@ -8,7 +8,8 @@ import { RunState } from '../../types/run';
 import { Flow, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
 import { PhoneIcon } from '../icons';
-import { Portrait } from '../portraits';
+import { Portrait, partsFor } from '../portraits';
+import { reachableTraits, revealedTraits } from '../../engine/appearance';
 import { Chip, Eyebrow, Flex, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Glitch, Pulse, Reveal, Typing, Waveform, WordReveal } from '../motion';
 import { color, radius } from '../theme';
@@ -41,7 +42,7 @@ export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectI
       <View style={{ alignItems: 'center' }}>
         <View style={{ width: 240, height: 240, alignItems: 'center', justifyContent: 'center' }}>
           <Pulse size={240} tint={incoming ? color.red : color.ink} period={1800} />
-          <Portrait id={s.id} size={128} />
+          <Portrait id={s.id} size={128} parts={partsFor(flow.run, s.id)} />
         </View>
         <Spacer h={24} />
         <Text style={[T.display, { textAlign: 'center' }]}>{s.name.split(' ')[0]}</Text>
@@ -50,6 +51,8 @@ export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectI
         <Text style={T.caption}>{declined ? 'Il insiste.' : s.role}</Text>
         <Spacer h={16} />
         <Text style={[T.body, T.italic, { textAlign: 'center', color: color.muted, fontFamily: T.body.fontFamily }]}>{s.psyche.cue}</Text>
+        <Spacer h={16} />
+        <Appearance flow={flow} suspectId={suspectId} />
       </View>
       <Flex />
       {incoming ? (
@@ -69,6 +72,20 @@ export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectI
         <Text style={[T.mono, { textAlign: 'center', marginBottom: 48 }]}>CONNEXION…</Text>
       )}
     </Screen>
+  );
+}
+
+/** What the player has pieced together of someone's look: detail, then where it comes from. */
+function Appearance({ flow, suspectId }: { flow: Flow; suspectId: SuspectId }) {
+  const known = revealedTraits(flow.run, suspectId);
+  const total = reachableTraits(flow.run, suspectId).length;
+  return (
+    <View style={{ alignItems: 'center', gap: 4 }}>
+      <Text style={T.mono}>
+        PORTRAIT {known.length}/{total}
+      </Text>
+      <Text style={[T.caption, { textAlign: 'center' }]}>{known.length ? known.map((t) => t.label).join(' · ') : 'Aucune image. Seulement une voix.'}</Text>
+    </View>
   );
 }
 
@@ -226,7 +243,7 @@ export function Interrogation({
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Portrait id={s.id} size={48} ring={call.hungUp ? color.red : color.lineHi} />
+        <Portrait id={s.id} size={48} parts={partsFor(flow.run, s.id)} ring={call.hungUp ? color.red : color.lineHi} />
         <View style={{ flex: 1 }}>
           <Text style={T.bodyStrong}>{s.name}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -412,7 +429,7 @@ export function SarahMessages({ flow, next }: { flow: Flow; next: Stage }) {
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Portrait id="sarah" size={48} />
+        <Portrait id="sarah" size={48} parts={partsFor(flow.run, 'sarah')} />
         <View>
           <Text style={T.bodyStrong}>Sarah Klein</Text>
           <Text style={T.caption}>Collègue de Nora · en ligne</Text>

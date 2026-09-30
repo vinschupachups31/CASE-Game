@@ -11,5 +11,6 @@ export function check(condition: Condition, run: RunState): boolean {
   if ('statement' in condition) return run.statements.some((s) => s.id === condition.statement);
   if ('message' in condition) return run.messages.includes(condition.message);
   if ('suspect' in condition) return run.suspects.includes(condition.suspect);
+  if ('contradiction' in condition) return run.contradictions.includes(condition.contradiction);
   return run.chapter >= condition.chapter;
 }
