@@ -10,9 +10,11 @@ import { CASE_2317 } from '../src/cases/23-17';
 import { createRun, isChapterComplete, reduceGame } from '../src/engine/gameEngine';
 import { PROFILES, Profile, simulate } from '../src/engine/simulator';
 import { GameEvent, RunMode, RunState } from '../src/types/run';
-import { Flow, Stage } from '../src/ui/flow';
+import { Flow, Stage, pageLabel } from '../src/ui/flow';
 import { haptic } from '../src/ui/haptics';
-import { Toast, ToastKind } from '../src/ui/kit';
+import { T, Toast, ToastKind } from '../src/ui/kit';
+import { Pressable, Text } from 'react-native';
+import { isVoiceOn, onVoiceChange, setVoiceOn } from '../src/ui/voice';
 import { color, motion } from '../src/ui/theme';
 import { Board } from '../src/ui/screens/board';
 import { ChapterEnd } from '../src/ui/screens/end';
@@ -100,6 +102,13 @@ export default function App() {
         <Animated.View style={{ flex: 1, width: '100%', maxWidth: 480, opacity: fade }}>
           <StageView flow={flow} />
         </Animated.View>
+        {/* Page marker for playtests ("03 · Terrain") and the voice switch. */}
+        <View pointerEvents="box-none" style={{ position: 'absolute', bottom: 0, width: '100%', maxWidth: 480, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24 }}>
+          <Text pointerEvents="none" style={[T.mono, { color: color.faint }]}>
+            {pageLabel(flow.stage)}
+          </Text>
+          <VoiceSwitch />
+        </View>
         {toast && <Toast key={toast.id} text={toast.text} kind={toast.kind} onHide={() => setToast(undefined)} />}
       </View>
     </SafeAreaProvider>
@@ -152,6 +161,7 @@ function StageView({ flow }: { flow: Flow }) {
         <Interrogation
           flow={flow}
           suspectId="leo"
+          opening="Allô ? … Qui êtes-vous ? Comment vous avez eu ce numéro ?"
           canHangUp={(r) => r.messages.includes('sarah_01')}
           hint="Demande-lui où il était après l’appel."
           next="sarah"
@@ -191,6 +201,7 @@ function StageView({ flow }: { flow: Flow }) {
         <Interrogation
           flow={flow}
           suspectId="marc"
+          opening={CASE_2317.messages.find((m) => m.id === 'marc_01')!.lines.join(' ')}
           canHangUp={(r) => isChapterComplete(r) && r.statements.some((s) => s.suspectId === 'marc')}
           hint="Demande-lui comment il connaît ce chiffre."
           next="end"
@@ -199,6 +210,16 @@ function StageView({ flow }: { flow: Flow }) {
     case 'end':
       return <ChapterEnd flow={flow} />;
   }
+}
+
+function VoiceSwitch() {
+  const [on, setOn] = useState(isVoiceOn());
+  useEffect(() => onVoiceChange(setOn), []);
+  return (
+    <Pressable accessibilityRole="switch" accessibilityState={{ checked: on }} hitSlop={16} onPress={() => setVoiceOn(!on)}>
+      <Text style={[T.mono, { color: on ? color.muted : color.faint }]}>{on ? 'VOIX ON' : 'VOIX OFF'}</Text>
+    </Pressable>
+  );
 }
 
 /** Entering the viewfinder marks the zone as reached for the engine. */

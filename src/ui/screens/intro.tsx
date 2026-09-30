@@ -9,6 +9,7 @@ import { PlayIcon, ShieldIcon } from '../icons';
 import { Eyebrow, Flex, GhostButton, Hairline, PrimaryButton, Screen, Segmented, Spacer, T } from '../kit';
 import { Counter, Pulse, Reveal, Waveform, WordReveal } from '../motion';
 import { color, radius } from '../theme';
+import { estimateMs, speak, stopVoice } from '../voice';
 
 // ---------- Boot: a notification, not a menu. ----------
 
@@ -57,9 +58,12 @@ export function Boot({ flow }: { flow: Flow }) {
 export function Dossier({ flow }: { flow: Flow }) {
   const [phase, setPhase] = useState<'idle' | 'playing' | 'done'>('idle');
   const voice = CASE_2317.opening.audio.join(' ');
+  const perWord = Math.round(estimateMs(voice, 'nora') / voice.split(' ').length);
+  useEffect(() => stopVoice, []);
   const play = () => {
     haptic.press();
     setPhase('playing');
+    speak(voice, 'nora', () => setPhase('done'));
   };
   return (
     <Screen
@@ -67,7 +71,7 @@ export function Dossier({ flow }: { flow: Flow }) {
       footer={
         phase === 'done' ? (
           <Reveal delay={900}>
-            <PrimaryButton label="Accepter l’affaire" onPress={() => flow.go('terrain')} />
+            <PrimaryButton label="Lancer l’enquête" onPress={() => flow.go('terrain')} />
           </Reveal>
         ) : (
           <PrimaryButton label={phase === 'idle' ? 'Écouter son dernier message' : 'Lecture…'} onPress={play} disabled={phase === 'playing'} />
@@ -110,7 +114,7 @@ export function Dossier({ flow }: { flow: Flow }) {
           {phase === 'idle' ? (
             <Text style={[T.title, T.italic, { color: color.faint }]}>{'«\u00A0Si quelqu’un écoute ça…\u00A0»'}</Text>
           ) : (
-            <WordReveal text={`« ${voice} »`} style={[T.title, T.italic]} perWord={260} onDone={() => setPhase('done')} />
+            <WordReveal text={`« ${voice} »`} style={[T.title, T.italic]} perWord={perWord} />
           )}
         </View>
       </Reveal>
@@ -136,6 +140,22 @@ export const PURPOSE_LABEL: Record<RouteStop['purpose'], string> = {
 };
 
 const MODE_SUB: Record<RunMode, string> = { short: '~20 MIN', normal: '~35 MIN', immersive: '~60 MIN' };
+
+/** What actually changes between modes: how far the places are, so how much you walk. */
+const MODE_INFO: Record<RunMode, { pitch: string; detail: string }> = {
+  short: {
+    pitch: 'Pour une pause.',
+    detail: 'Tous les lieux sont à moins de 1 km. Peu de marche : quand un lieu manque, l’énigme se joue là où tu es.',
+  },
+  normal: {
+    pitch: 'Le parcours conseillé pour une première affaire.',
+    detail: 'Lieux jusqu’à 2 km. Marche et enquête s’équilibrent.',
+  },
+  immersive: {
+    pitch: 'Pour redécouvrir ta ville.',
+    detail: 'Lieux jusqu’à 4 km, plus éloignés les uns des autres. Plus de marche, plus de temps pour observer entre deux indices.',
+  },
+};
 
 export function Terrain({ flow }: { flow: Flow }) {
   const [scanning, setScanning] = useState(true);
@@ -197,6 +217,17 @@ export function Terrain({ flow }: { flow: Flow }) {
             value={flow.run.mode}
             onChange={flow.setMode}
           />
+        </Reveal>
+        <Spacer h={16} />
+        <Reveal key={flow.run.mode} duration={320} from={6}>
+          <Text style={T.bodyStrong}>{MODE_INFO[flow.run.mode].pitch}</Text>
+          <Text style={T.body}>{MODE_INFO[flow.run.mode].detail}</Text>
+          <Spacer h={8} />
+          <Text style={T.mono}>
+            {t.zonesFound} LIEU{t.zonesFound > 1 ? 'X' : ''} · {(t.distanceM / 1000).toFixed(1).replace('.', ',')} KM MAX · ~{t.durationMin} MIN
+            {t.stops.some((x) => x.type === 'in_place') ? ` · ${t.stops.filter((x) => x.type === 'in_place').length} SUR PLACE` : ''}
+          </Text>
+          <Text style={[T.caption, { marginTop: 8 }]}>Même affaire, même vérité dans les trois modes. Seule la marche change.</Text>
         </Reveal>
         <Spacer h={24} />
         {t.stops.map((stop, i) => (

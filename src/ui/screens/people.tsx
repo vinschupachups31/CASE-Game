@@ -11,6 +11,7 @@ import { PhoneIcon } from '../icons';
 import { Chip, Eyebrow, Flex, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Glitch, Pulse, Reveal, Typing, Waveform, WordReveal } from '../motion';
 import { color, radius } from '../theme';
+import { estimateMs, speak, stopVoice } from '../voice';
 
 const suspectOf = (id: SuspectId) => CASE_2317.suspects.find((s) => s.id === id)!;
 const initials = (name: string) =>
@@ -116,7 +117,22 @@ const PRESENT: Record<string, string> = {
   e03: 'Nora a écrit : « M.D. sait que Sarah m’a donné les fichiers. »',
 };
 
-export function Interrogation({ flow, suspectId, canHangUp, hint, next }: { flow: Flow; suspectId: SuspectId; canHangUp: (run: RunState) => boolean; hint: string; next: Stage }) {
+export function Interrogation({
+  flow,
+  suspectId,
+  canHangUp,
+  hint,
+  next,
+  opening,
+}: {
+  flow: Flow;
+  suspectId: SuspectId;
+  canHangUp: (run: RunState) => boolean;
+  hint: string;
+  next: Stage;
+  /** First words of the call, spoken before the player asks anything. */
+  opening: string;
+}) {
   const s = suspectOf(suspectId);
   const [tab, setTab] = useState<'questions' | 'evidence'>('questions');
   const [asked, setAsked] = useState<string[]>([]);
@@ -127,7 +143,16 @@ export function Interrogation({ flow, suspectId, canHangUp, hint, next }: { flow
 
   useEffect(() => {
     const t = setInterval(() => setSeconds((x) => x + 1), 1000);
-    return () => clearInterval(t);
+    const hello = setTimeout(() => {
+      setCurrent({ q: '', a: opening });
+      setSpeaking(true);
+      speak(opening, suspectId, () => setSpeaking(false));
+    }, 700);
+    return () => {
+      clearTimeout(hello);
+      clearInterval(t);
+      stopVoice();
+    };
   }, []);
 
   function put(label: string, question: string) {
@@ -137,6 +162,7 @@ export function Interrogation({ flow, suspectId, canHangUp, hint, next }: { flow
     setAsked((a) => [...a, label]);
     setCurrent({ q: question, a: answer.text });
     setSpeaking(true);
+    speak(answer.text, suspectId, () => setSpeaking(false));
   }
 
   const evidence = evidenceView(flow.run);
@@ -175,9 +201,9 @@ export function Interrogation({ flow, suspectId, canHangUp, hint, next }: { flow
       <View style={{ minHeight: 144, flexShrink: 1 }}>
         {current ? (
           <>
-            <Text style={T.caption}>Toi — {current.q}</Text>
+            {current.q ? <Text style={T.caption}>Toi — {current.q}</Text> : <Text style={T.caption}>{s.name.split(' ')[0]}</Text>}
             <Spacer h={8} />
-            <WordReveal key={current.q + asked.length} text={current.a} style={T.title} perWord={180} onDone={() => setSpeaking(false)} />
+            <WordReveal key={current.q + asked.length} text={current.a} style={T.title} perWord={Math.round(estimateMs(current.a, suspectId) / current.a.split(' ').length)} />
           </>
         ) : (
           <Text style={[T.title, T.italic, { color: color.faint }]}>« Allô ? »</Text>
@@ -368,7 +394,12 @@ export function Threat({ flow, next }: { flow: Flow; next: Stage }) {
     return () => clearTimeout(t);
   }, []);
   const lines = started ? m?.lines ?? [] : [];
-  const { shown, typing } = useScript(lines, 1500);
+  const { shown, typing } = useScript(lines, 2200);
+  // The unknown number speaks too: low, slow, almost a whisper.
+  useEffect(() => {
+    if (shown > 0) speak(lines[shown - 1], 'unknown');
+  }, [shown]);
+  useEffect(() => stopVoice, []);
   const done = started && shown >= lines.length;
   const minutes = flow.capturedAt ? Math.max(1, Math.round((Date.now() - flow.capturedAt) / 60000)) : undefined;
 

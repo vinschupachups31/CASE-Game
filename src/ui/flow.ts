@@ -32,6 +32,35 @@ export const STAGES = [
 
 export type Stage = (typeof STAGES)[number];
 
+/** Human names, shown as a small page marker so testers can say exactly where they are. */
+export const STAGE_NAMES: Record<Stage, string> = {
+  boot: 'Notification',
+  dossier: 'Dossier Nora',
+  terrain: 'Terrain',
+  mission1: 'Mission 1',
+  navigate1: 'Boussole',
+  pocket1: 'Range ton téléphone',
+  arrived1: 'Zone atteinte',
+  capture1: 'Viseur année',
+  detect1: 'Détection année',
+  evidence1: 'Preuve appel',
+  ringLeo: 'Appel Léo',
+  callLeo: 'Interrogatoire Léo',
+  sarah: 'Messages Sarah',
+  mission2: 'Mission 2',
+  capture2: 'Viseur mot',
+  detect2: 'Détection mot',
+  evidence2: 'Preuve dossier',
+  board: 'Carnet',
+  walk: 'Marche',
+  threat: 'Numéro inconnu',
+  ringMarc: 'Appel Marc',
+  callMarc: 'Interrogatoire Marc',
+  end: 'Fin de chapitre',
+};
+
+export const pageLabel = (stage: Stage) => `${String(STAGES.indexOf(stage) + 1).padStart(2, '0')} · ${STAGE_NAMES[stage]}`;
+
 export const progressOf = (stage: Stage) => STAGES.indexOf(stage) / (STAGES.length - 1);
 
 export type Flow = {
