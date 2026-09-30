@@ -413,3 +413,18 @@ describe('Modes longs — témoins, fausses pistes, énigme du nombre', () => {
     expect(VOICE_LINES.filter((l) => l.speaker === 'paul')).toHaveLength(3);
   });
 });
+
+describe('Fil de l’enquête', () => {
+  it('la frise se remplit avec les preuves, dans l’ordre des heures', async () => {
+    const { knownTimeline } = await import('../src/engine/notebook');
+    expect(knownTimeline(createRun()).map((c) => c.time)).toEqual(['23:17']);
+    expect(knownTimeline(afterYear()).map((c) => c.time)).toEqual(['21:53', '23:17']);
+    const full = playthrough('dense', 'marc', 'immersive').run;
+    expect(knownTimeline(full).map((c) => c.time)).toEqual(['21:45', '21:53', '22:34', '22:41', '23:17']);
+  });
+
+  it('Marc répond vraiment quand on lui demande s’il tenait à Nora', () => {
+    const run = reduceGame(afterYear(), { type: 'CAPTURE', slot: 'WORLD_02', raw: 'PHARMACIE', source: 'camera' });
+    expect(ask(run, 'marc', 'Vous teniez à Nora, n’est-ce pas ?').topicId).toBe('marc_care');
+  });
+});

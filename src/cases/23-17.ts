@@ -337,6 +337,11 @@ export const CASE_2317: CaseFile = deepFreeze({
         statementId: 'marc_home_2241',
       },
       {
+        id: 'marc_care',
+        patterns: ['teniez', 'tenir', 'aimiez', 'proche', 'ami'],
+        answer: 'Beaucoup. Elle était brillante… et imprudente. Léo, lui, ne la lâchait pas.',
+      },
+      {
         id: 'marc_leo',
         patterns: ['leo', 'vasseur', 'suivait'],
         answer: 'Léo la suivait. Demandez-lui où il était vraiment.',
@@ -455,6 +460,14 @@ export const CASE_2317: CaseFile = deepFreeze({
   ],
 
   accusation: { requiredEvidence: ['e02', 'e03'], requiredContradictions: ['c_marc_sarah'] },
+
+  clues: [
+    { time: '21:45', label: 'Nora quitte son immeuble', revealWhen: { flag: 'WITNESS_PAUL' } },
+    { time: '21:53', label: 'Appel à Léo · 4 min', revealWhen: { evidence: 'e01' }, evidenceId: 'e01' },
+    { time: '22:34', label: 'Deux cafés, Café du Marché', revealWhen: { evidence: 'e04' }, evidenceId: 'e04' },
+    { time: '22:41', label: 'Nora est encore en vie', revealWhen: { message: 'marc_01' } },
+    { time: '23:17', label: 'Son message programmé part', revealWhen: { all: [] } },
+  ],
 
   // ---- PROPOSITION (à valider) : apparence des suspects, découverte au fil de l'enquête ----
   // Chaque détail vient d'une source concrète. Aucun ne change la vérité ; les modes longs en révèlent plus.

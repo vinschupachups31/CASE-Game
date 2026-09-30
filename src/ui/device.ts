@@ -4,22 +4,31 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { LatLon } from '../engine/geo';
 import { fetchPlaces } from '../engine/places';
 import { Candidate } from '../engine/worldEngine';
 
 export type World = { origin: LatLon; places: Candidate[] };
 
-/** Reads the player's surroundings: position, then public places from OpenStreetMap. */
+/**
+ * Reads the player's surroundings: position, then public places from OpenStreetMap.
+ * No map (network down) still returns the position with no places: the simulation is then pinned around the player.
+ */
 export async function readSurroundings(timeoutMs = 15000): Promise<World> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => (timer = setTimeout(() => reject(new Error('timeout')), timeoutMs)));
-  const read = async () => {
+  const read = async (): Promise<World> => {
     const perm = await Location.requestForegroundPermissionsAsync();
     if (perm.status !== 'granted') throw new Error('permission');
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    const last = await Location.getLastKnownPositionAsync().catch(() => null);
+    const pos = last ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
     const origin = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-    return { origin, places: await fetchPlaces(origin) };
+    try {
+      return { origin, places: await fetchPlaces(origin) };
+    } catch {
+      return { origin, places: [] };
+    }
   };
   try {
     return await Promise.race([read(), timeout]);
@@ -81,6 +90,8 @@ export function useHeading(enabled: boolean): number | undefined {
 /** The daily appointment: a system notification when the next chapter opens. */
 export async function scheduleChapterNotification(at: Date, title: string, body: string): Promise<void> {
   if (Platform.OS === 'web' || at.getTime() <= Date.now()) return;
+  // Expo Go no longer ships notifications on Android: they need a development or store build.
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return;
   try {
     const N = require('expo-notifications') as typeof import('expo-notifications');
     const perm = await N.requestPermissionsAsync();

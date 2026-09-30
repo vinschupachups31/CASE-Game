@@ -24,3 +24,14 @@ export function bearingDeg(a: LatLon, b: LatLon): number {
 export function relativeBearing(targetBearing: number, heading: number): number {
   return (((targetBearing - heading) % 360) + 540) % 360 - 180;
 }
+
+/** The point reached from `from` after `distance` metres towards `bearing` (degrees from north). */
+export function destination(from: LatLon, bearing: number, distance: number): LatLon {
+  const d = distance / R;
+  const b = rad(bearing);
+  const lat1 = rad(from.lat);
+  const lon1 = rad(from.lon);
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(b));
+  const lon2 = lon1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+  return { lat: (lat2 * 180) / Math.PI, lon: (((lon2 * 180) / Math.PI + 540) % 360) - 180 };
+}

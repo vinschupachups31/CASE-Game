@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { Ambient, Flash, Mood, ease, easeInOut } from '../src/ui/fx';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -11,13 +11,13 @@ import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import { CASE_2317 } from '../src/cases/23-17';
 import { createRun, isChapterComplete, reduceGame } from '../src/engine/gameEngine';
 import { PROFILES, Profile, simulate } from '../src/engine/simulator';
-import { buildTerrain } from '../src/engine/worldEngine';
+import { anchorAround, buildTerrain } from '../src/engine/worldEngine';
 import { World } from '../src/ui/device';
 import { Saved, clearGame, loadGame, saveGame } from '../src/ui/save';
 import { GameEvent, RunMode, RunState } from '../src/types/run';
-import { Flow, ROMAN, SUSPECT_SHORT, Stage, chapterOf, pageLabel, resolveStage } from '../src/ui/flow';
+import { Flow, OBJECTIVES, ROMAN, SUSPECT_SHORT, Stage, chapterOf, pageLabel, resolveStage } from '../src/ui/flow';
 import { haptic } from '../src/ui/haptics';
-import { ChapterContext, T, Toast, ToastKind } from '../src/ui/kit';
+import { ChapterContext, ObjectiveContext, T, Toast, ToastKind } from '../src/ui/kit';
 import { Pressable, Text } from 'react-native';
 import { isVoiceOn, onVoiceChange, setVoiceOn } from '../src/ui/voice';
 import { color, motion } from '../src/ui/theme';
@@ -28,6 +28,7 @@ import { Boot, Dossier, Terrain } from '../src/ui/screens/intro';
 import { Interrogation, Ring, SarahMessages, Threat, Walk } from '../src/ui/screens/people';
 import { Accuse, Verdict } from '../src/ui/screens/verdict';
 import { FalseLead, Witness } from '../src/ui/screens/leads';
+import { Download, Unlock } from '../src/ui/screens/files';
 import { newTraits } from '../src/engine/appearance';
 import { Portrait, partsFor } from '../src/ui/portraits';
 import { SuspectId } from '../src/types/case';
@@ -62,7 +63,14 @@ export default function App() {
 
   const [world, setWorld] = useState<World>();
   const [endedAt, setEndedAt] = useState<number>();
-  const terrain = useMemo(() => (world ? buildTerrain(world.places, run.mode) : simulate(profileId, run.mode)), [world, profileId, run.mode]);
+  // Real map when available; otherwise the simulated places, pinned around the player when the GPS knows where they are.
+  const terrain = useMemo(
+    () =>
+      world?.places.length
+        ? buildTerrain(world.places, run.mode)
+        : buildTerrain(world ? anchorAround(world.origin, PROFILES[profileId].places) : PROFILES[profileId].places, run.mode),
+    [world, profileId, run.mode],
+  );
 
   // Save and resume: closing the app never loses the investigation.
   const [saved, setSaved] = useState<Saved>();
@@ -81,7 +89,6 @@ export default function App() {
     saveGame({ v: 1, run, stage, profileId, world, capturedAt, endedAt });
   }, [loaded, run, stage, profileId, world, capturedAt, endedAt]);
   // Scene transitions: a soft dissolve with depth by default, a hard cut for what should startle.
-  const reduced = useReducedMotion();
   const scene = useSharedValue(1);
   const [cut, setCut] = useState<{ n: number; tint: string }>({ n: 0, tint: color.ink });
   const sceneStyle = useAnimatedStyle(() => ({
@@ -112,7 +119,6 @@ export default function App() {
   function go(target: Stage) {
     const next = resolveStage(target, run.mode);
     const kind = TRANSITION[next] ?? 'dissolve';
-    if (reduced) return setStage(next);
     if (kind === 'cut') {
       setStage(next);
       setCut((c) => ({ n: c.n + 1, tint: next === 'threat' || next === 'ringMarc' ? color.red : color.ink }));
@@ -178,7 +184,9 @@ export default function App() {
         <Ambient mood={MOOD[stage] ?? 'calm'} />
         <Animated.View style={[{ flex: 1, width: '100%', maxWidth: 480 }, sceneStyle]}>
           <ChapterContext.Provider value={ROMAN[chapterOf(stage)]}>
-            <StageView flow={flow} />
+            <ObjectiveContext.Provider value={OBJECTIVES[stage]}>
+              <StageView flow={flow} />
+            </ObjectiveContext.Provider>
           </ChapterContext.Provider>
         </Animated.View>
         {/* Page marker for playtests ("03 · Terrain") and the voice switch. */}
@@ -213,6 +221,7 @@ const MOOD: Partial<Record<Stage, Mood>> = {
   detect2: 'dark',
   capture3: 'dark',
   detect3: 'dark',
+  download: 'dark',
   ringLeo: 'dark',
   ringSarah: 'dark',
   ringMarc2: 'dark',
@@ -233,10 +242,10 @@ const TRANSITION: Partial<Record<Stage, 'cut' | 'flash' | 'slow'>> = {
   detect1: 'flash',
   detect2: 'flash',
   detect3: 'flash',
-  evidence1: 'flash',
-  evidence2: 'flash',
+  unlock1: 'flash',
+  unlock2: 'flash',
+  unlock3: 'flash',
   evidence3: 'flash',
-  evidence5: 'flash',
   end: 'slow',
   verdict: 'slow',
   chapter2: 'slow',
@@ -247,6 +256,8 @@ function StageView({ flow }: { flow: Flow }) {
   switch (flow.stage) {
     case 'boot':
       return <Boot flow={flow} />;
+    case 'download':
+      return <Download flow={flow} />;
     case 'dossier':
       return <Dossier flow={flow} />;
     case 'terrain':
@@ -258,7 +269,7 @@ function StageView({ flow }: { flow: Flow }) {
           number="01"
           title="Dernière"
           italic="trace."
-          text="À 21:53, Nora a passé un appel. Retrouve la zone depuis laquelle il a été émis."
+          text="À 21:53, Nora a passé un appel. Son journal d’appels est verrouillé, et Nora verrouillait tout avec ce qu’elle voyait autour d’elle. Va là d’où elle a appelé : la clé y est inscrite."
           cta="Localiser le signal"
           next="navigate1"
         />
@@ -271,14 +282,16 @@ function StageView({ flow }: { flow: Flow }) {
       return (
         <Arrived
           flow={flow}
-          text={'Cherche une année autour de toi.\nUne façade, une plaque, une porte.'}
+          text={'Nora a appelé d’ici. Elle a fermé son journal avec une année visible de cet endroit.\nUne façade, une plaque, une porte.'}
           next="capture1"
         />
       );
     case 'capture1':
       return <ZoneReached flow={flow} />;
     case 'detect1':
-      return <Detect flow={flow} next="evidence1" back="capture1" />;
+      return <Detect flow={flow} next="unlock1" back="capture1" />;
+    case 'unlock1':
+      return <Unlock flow={flow} evidenceId="e01" title="Journal d’appels de Nora" rule="Nora l’a verrouillé avec l’année qu’elle avait sous les yeux, là d’où elle a appelé." next="evidence1" />;
     case 'evidence1':
       return <Evidence flow={flow} id="e01" cta="Appeler Léo" next="ringLeo" />;
     case 'ringLeo':
@@ -307,16 +320,18 @@ function StageView({ flow }: { flow: Flow }) {
           number="02"
           title="Le nom était"
           italic="devant elle."
-          quote="Le nom était devant moi."
-          text={word.prompt}
+          quote="Le nom était devant moi. Toujours la troisième."
+          text={`Son dossier principal est verrouillé. Clé : ton année, ${flow.run.variables.WORLD_01?.value ?? ''}, puis une lettre. Nora prenait toujours la 3e lettre d’un mot qu’elle avait sous les yeux. ${word.prompt}`}
           cta="Ouvrir l’objectif"
           next="capture2"
         />
       );
     case 'capture2':
-      return <Viewfinder flow={flow} slot="WORLD_02" instruction="Un mot d’au moins 6 lettres." placeholder={flow.profile.word ?? 'PHARMACIE'} next="detect2" fallbackNext="evidence2" />;
+      return <Viewfinder flow={flow} slot="WORLD_02" instruction="Un mot d’au moins 6 lettres." placeholder={flow.profile.word ?? 'PHARMACIE'} next="detect2" fallbackNext="unlock2" />;
     case 'detect2':
-      return <Detect flow={flow} next="evidence2" back="capture2" />;
+      return <Detect flow={flow} next="unlock2" back="capture2" />;
+    case 'unlock2':
+      return <Unlock flow={flow} evidenceId="e02" title="Dossier principal de Nora" rule="Sa clé : l’année du lieu de l’appel, puis la 3e lettre d’un mot de ta ville. « Le nom était devant moi. »" next="evidence2" />;
     case 'evidence2':
       return <Evidence flow={flow} id="e02" cta="Continuer" next="ticket" />;
     case 'ticket':
@@ -373,9 +388,11 @@ function StageView({ flow }: { flow: Flow }) {
         />
       );
     case 'capture3':
-      return <Viewfinder flow={flow} slot="WORLD_03" instruction="Un nombre. Une porte, une rue, un horaire." placeholder="12" next="detect3" fallbackNext="evidence5" />;
+      return <Viewfinder flow={flow} slot="WORLD_03" instruction="Un nombre. Une porte, une rue, un horaire." placeholder="12" next="detect3" fallbackNext="unlock3" />;
     case 'detect3':
-      return <Detect flow={flow} next="evidence5" back="capture3" />;
+      return <Detect flow={flow} next="unlock3" back="capture3" />;
+    case 'unlock3':
+      return <Unlock flow={flow} evidenceId="e05" title="Clé USB de Nora" rule="Protégée par un nombre, pris comme toujours dans la rue." next="evidence5" />;
     case 'evidence5':
       return <Evidence flow={flow} id="e05" cta="Continuer" next="leadSarah" />;
     case 'leadSarah':
@@ -434,5 +451,5 @@ function ZoneReached({ flow }: { flow: Flow }) {
   useEffect(() => {
     if (!flow.run.flags.includes('ZONE_1_REACHED')) flow.apply({ type: 'SET_FLAG', flag: 'ZONE_1_REACHED' });
   }, []);
-  return <Viewfinder flow={flow} slot="WORLD_01" instruction="Une année. Quatre chiffres." placeholder={flow.profile.year ?? '1927'} next="detect1" fallbackNext="evidence1" />;
+  return <Viewfinder flow={flow} slot="WORLD_01" instruction="Une année. Quatre chiffres." placeholder={flow.profile.year ?? '1927'} next="detect1" fallbackNext="unlock1" />;
 }

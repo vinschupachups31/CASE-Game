@@ -4,6 +4,7 @@
 import { ChallengeKind } from '../types/case';
 import { RunMode } from '../types/run';
 import { FALLBACK_CHALLENGES } from './challengeEngine';
+import { LatLon, destination } from './geo';
 
 export type PlaceKind = 'open_space' | 'landmark' | 'commercial' | 'quiet';
 
@@ -85,4 +86,12 @@ export function compass(bearingDeg: number): string {
 /** True when the player is inside the search zone (CASE vibrates). */
 export function inSearchZone(remainingM: number, radiusM = 60): boolean {
   return remainingM <= radiusM;
+}
+
+/**
+ * Without a map (no network), simulated places are pinned around the player's real position,
+ * so the compass and the distance still follow their steps.
+ */
+export function anchorAround(origin: LatLon, places: Candidate[]): Candidate[] {
+  return places.map((p) => (p.lat !== undefined ? p : { ...p, ...destination(origin, p.bearingDeg ?? 0, p.distanceM) }));
 }

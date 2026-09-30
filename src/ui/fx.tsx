@@ -21,7 +21,8 @@ import { color } from './theme';
 
 // Motion layer, 2026: the screen is a living film frame. Grain, drifting light, masked titles,
 // data that decrypts itself, cards that catch the light when the phone moves.
-// Everything runs on the UI thread (Reanimated) and stands still when the OS asks for reduced motion.
+// Everything runs on the UI thread (Reanimated). When the OS asks for reduced motion (common on Android,
+// battery saver included), only large movements stop — drift, grain, tilt. Fades, masks and decrypting stay.
 
 export const ease = Easing.bezier(0.16, 1, 0.3, 1);
 export const easeInOut = Easing.bezier(0.65, 0, 0.35, 1);
@@ -182,13 +183,12 @@ export function MaskReveal({
 }
 
 function MaskLine({ children, style, delay, duration }: { children: React.ReactNode; style: StyleProp<TextStyle>; delay: number; duration: number }) {
-  const reduced = useReducedMotion();
-  const v = useSharedValue(reduced ? 1 : 0);
+  const v = useSharedValue(0);
   const [h, setH] = useState(0);
   useEffect(() => {
-    if (reduced || !h) return;
+    if (!h) return;
     v.value = withDelay(delay, withTiming(1, { duration, easing: ease }));
-  }, [h, reduced]);
+  }, [h]);
   const s = useAnimatedStyle(() => ({
     opacity: interpolate(v.value, [0, 0.3, 1], [0, 1, 1]),
     transform: [{ translateY: (1 - v.value) * h * 1.05 }, { rotateZ: `${(1 - v.value) * 3}deg` }],
@@ -219,10 +219,8 @@ export function Scramble({
   onDone?: () => void;
   numberOfLines?: number;
 }) {
-  const reduced = useReducedMotion();
-  const [out, setOut] = useState(reduced ? text : text.replace(/\S/g, ' '));
+  const [out, setOut] = useState(text.replace(/\S/g, ' '));
   useEffect(() => {
-    if (reduced) return setOut(text);
     let raf: ReturnType<typeof setTimeout>;
     const start = Date.now() + delay;
     const tick = () => {
@@ -333,13 +331,11 @@ export function Tilt({ children, max = 7, style, radius = 24 }: { children: Reac
 
 /** A light sweeping once across a surface (buttons), then again every few seconds. */
 export function Glint({ width, every = 5200, delay = 700, tint = 'rgba(255,255,255,0.55)' }: { width: number; every?: number; delay?: number; tint?: string }) {
-  const reduced = useReducedMotion();
   const v = useSharedValue(0);
   useEffect(() => {
-    if (reduced) return;
     v.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 900, easing: easeInOut }), withDelay(every, withTiming(0, { duration: 0 }))), -1));
     return () => cancelAnimation(v);
-  }, [reduced, width]);
+  }, [width]);
   const s = useAnimatedStyle(() => ({ transform: [{ translateX: interpolate(v.value, [0, 1], [-90, width + 30]) }, { skewX: '-20deg' }] }));
   return (
     <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, bottom: 0, width: 60 }, s]}>

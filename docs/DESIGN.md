@@ -9,6 +9,15 @@ Référence : skill `.claude/skills/mobile-app-ui-design` (règles 60/30/10, gri
 - **Espacements** : multiples de 8 (4 toléré). Marges latérales de 24.
 - **Mouvement** : courbe expo-out `(0.16, 1, 0.3, 1)`, entrées décalées (Reveal), transitions en fondu au noir entre écrans.
 
+## Le fil de l'enquête
+Une règle tient toute l'affaire : **Nora verrouillait ses fichiers avec ce qu'elle avait sous les yeux.**
+1. Le dossier téléchargé montre d'emblée deux fichiers verrouillés : `CALL_????.dat` et `NORA_????-?.doc`.
+2. L'année trouvée là d'où Nora a appelé ouvre son journal d'appels → Léo.
+3. L'année + la 3e lettre d'un mot (« Le nom était devant moi ») ouvrent son dossier principal → Marc, sa source.
+4. Le numéro inconnu cite ton année : seul quelqu'un qui surveillait Nora pouvait la connaître.
+5. Chapitre II : la note cachée de Nora prouve que Marc connaissait Sarah, ce qu'il nie.
+Chaque écran affiche l'**objectif** du moment ; une **frise de la soirée** se remplit sur le côté des preuves ; un écran de **déverrouillage** montre la clé trouvée entrer dans le nom du fichier.
+
 ## Couche de mouvement (`src/ui/fx.tsx`, Reanimated 4)
 Tout tourne sur le fil d'interface, à la fréquence de l'écran, et se fige si le téléphone demande de réduire les animations.
 - **Ambiance** : grain de film animé, deux halos qui dérivent lentement, vignettage. L'ambiance suit l'histoire : sombre pendant les appels et au viseur, rouge dans les moments de tension (numéro inconnu, Marc, accusation).

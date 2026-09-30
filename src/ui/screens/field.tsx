@@ -13,6 +13,8 @@ import { CompassDial, DeviceIcon, FileIcon, Needle } from '../icons';
 import { Eyebrow, Flex, GhostButton, Hairline, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Counter, Pulse, Reveal, ScanLine } from '../motion';
 import { MaskReveal, Scramble, Tilt } from '../fx';
+import { Receipt } from './receipt';
+import { TimelineRail } from './files';
 import { color, motion, radius } from '../theme';
 
 // The camera module is only loaded on device: on web it pulls a barcode worker we do not need.
@@ -98,8 +100,10 @@ export function Navigate({ flow, stopIndex, label, next }: { flow: Flow; stopInd
   const place = stop.type === 'place' ? stop.place : undefined;
   // Real place: live distance and direction from where the player stands, turned by the compass.
   const live = useLiveTarget(place);
-  const heading = useHeading(!!live);
-  const bearing = live ? (heading !== undefined ? relativeBearing(live.bearing, heading) : live.bearing) : place?.bearingDeg ?? 0;
+  // The needle always follows the phone's compass, even without GPS.
+  const heading = useHeading(!!place);
+  const target = live?.bearing ?? place?.bearingDeg ?? 0;
+  const bearing = heading !== undefined ? relativeBearing(target, heading) : target;
   const distance = live?.distance ?? place?.distanceM ?? 0;
   const rot = useRef(new Animated.Value(-120)).current;
   useEffect(() => {
@@ -132,7 +136,7 @@ export function Navigate({ flow, stopIndex, label, next }: { flow: Flow; stopInd
               <Text style={[T.mono, { marginBottom: 12 }]}>MÈTRES</Text>
             </View>
             <Text style={[T.label, { color: color.ink, marginTop: 8 }]}>
-              {heading !== undefined ? (Math.abs(bearing) < 20 ? 'Droit devant' : bearing > 0 ? 'Sur ta droite' : 'Sur ta gauche') : DIRECTION[compass(live?.bearing ?? bearing)]}
+              {heading !== undefined ? (Math.abs(bearing) < 20 ? 'Droit devant' : bearing > 0 ? 'Sur ta droite' : 'Sur ta gauche') : DIRECTION[compass(target)]}
             </Text>
             {live && <Text style={[T.mono, { marginTop: 8 }]}>{place.name.toUpperCase()}</Text>}
           </>
@@ -426,10 +430,10 @@ export function Detect({ flow, next, back }: { flow: Flow; next: Stage; back: St
       <Reveal delay={800}>
         <Text style={[T.body, { textAlign: 'center' }]}>
           {isWord
-            ? `Troisième lettre : ${clean[2]}.\nNora cachait ses codes ainsi.`
+            ? `Troisième lettre : ${clean[2]}.\nAvec ton année : ${flow.run.variables.WORLD_01?.value ?? ''}-${clean[2]}.`
             : isNumber
-              ? 'Un nombre de ta rue.\nC’était le mot de passe de sa clé.'
-              : 'Une date inscrite dans ta ville.\nL’affaire va s’en souvenir.'}
+              ? 'Un nombre de ta rue.\nLa clé de sa clé USB.'
+              : 'Une date inscrite dans ta ville.\nLa clé du journal d’appels de Nora.'}
         </Text>
       </Reveal>
       <Spacer h={16} />
@@ -472,17 +476,28 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
 
   return (
     <Screen progress={progressFor(flow)} footer={<Reveal delay={dramatic ? 3000 : 1600}><PrimaryButton label={cta} onPress={() => flow.go(next)} /></Reveal>}>
+      <View style={{ flex: 1, flexDirection: 'row', gap: 16 }}>
+      <View style={{ flex: 1 }}>
       <Reveal>
         <Eyebrow>Preuve 0{n} · débloquée</Eyebrow>
       </Reveal>
       <Spacer h={24} />
+      {id === 'e04' ? (
+        <Reveal delay={150}>
+          <Tilt radius={4}>
+            <Receipt run={flow.run} />
+          </Tilt>
+        </Reveal>
+      ) : (
       <Reveal delay={150}>
         <Tilt radius={radius.l}>
         <View style={{ backgroundColor: 'rgba(19,22,25,0.82)', borderRadius: radius.l, borderWidth: 1, borderColor: color.lineHi }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16 }}>
-            <FileIcon />
-            <View style={{ flex: 1 }}>
-              <Scramble text={file.fileName} delay={250} duration={600} numberOfLines={1} style={[T.monoL, { color: color.ink }]} />
+          <View style={{ padding: 16, gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <FileIcon />
+              <View style={{ flex: 1 }}>
+                <Scramble text={file.fileName} delay={250} duration={600} numberOfLines={1} style={[T.monoL, { color: color.ink }]} />
+              </View>
             </View>
             <Text style={T.mono}>{file.title.toUpperCase()}</Text>
           </View>
@@ -498,8 +513,9 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
         </View>
         </Tilt>
       </Reveal>
+      )}
       <Spacer h={16} />
-      {variable && (
+      {variable && id !== 'e04' && (
         <Reveal delay={500 + file.lines.length * 280}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', borderRadius: radius.pill, borderWidth: 1, borderColor: color.lineHi, paddingVertical: 8, paddingHorizontal: 16 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color.red }} />
@@ -552,6 +568,10 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
         </Reveal>
       )}
       <Spacer h={16} />
+      </View>
+      {/* The evening so far: where this clue sits in time. */}
+      <TimelineRail run={flow.run} highlight={id} />
+      </View>
     </Screen>
   );
 }

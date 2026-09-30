@@ -197,6 +197,9 @@ export type AppearanceTrait = {
   minMode?: Mode;
 };
 
+/** A moment of the evening the player can place on their timeline once they have the clue for it. */
+export type TimeClue = { time: string; label: string; revealWhen: Condition; evidenceId?: string };
+
 export type CaseFile = {
   id: string;
   title: string;
@@ -216,4 +219,6 @@ export type CaseFile = {
   falseLeads: FalseLeadDef[];
   accusation: { requiredEvidence: string[]; requiredContradictions: string[] };
   appearance: Record<SuspectId, AppearanceTrait[]>;
+  /** The player's timeline: what they know of the evening, in order. */
+  clues: TimeClue[];
 };

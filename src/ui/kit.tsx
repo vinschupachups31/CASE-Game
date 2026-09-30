@@ -37,6 +37,8 @@ export function Eyebrow({ children, red, style }: { children: React.ReactNode; r
  */
 /** Chapter shown in the top bar, set once by the app for the current stage. */
 export const ChapterContext = React.createContext('I');
+/** Current objective, shown under the progress bar. */
+export const ObjectiveContext = React.createContext<string | undefined>(undefined);
 
 export function Screen({
   children,
@@ -69,8 +71,9 @@ export function TopBar({ progress = 0, chapter }: { progress?: number; chapter: 
   useEffect(() => {
     Animated.timing(v, { toValue: progress, duration: motion.slow, easing: motion.ease, useNativeDriver: false }).start();
   }, [progress]);
+  const objective = React.useContext(ObjectiveContext);
   return (
-    <View style={{ paddingHorizontal: space.gutter, marginBottom: 32 }}>
+    <View style={{ paddingHorizontal: space.gutter, marginBottom: objective ? 24 : 32 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text style={[T.label, { color: color.ink, letterSpacing: 6 }]}>CASE</Text>
         <Text style={T.mono}>23:17 · CH. {chapter}</Text>
@@ -97,6 +100,14 @@ export function TopBar({ progress = 0, chapter }: { progress?: number; chapter: 
           }}
         />
       </View>
+      {objective && (
+        <View key={objective} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: color.red }} />
+          <Text style={[T.mono, { color: color.inkSoft, flex: 1 }]} numberOfLines={1}>
+            {objective.toUpperCase()}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

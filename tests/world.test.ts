@@ -63,3 +63,24 @@ describe('Lieux réels (OpenStreetMap)', () => {
     expect(overpassQuery(HOME, 1500)).toContain('around:1500,48.8566,2.3522');
   });
 });
+
+describe('Sans carte : lieux simulés placés autour du joueur', () => {
+  it('un point projeté est à la bonne distance et dans la bonne direction', async () => {
+    const { destination } = await import('../src/engine/geo');
+    const p = destination(HOME, 90, 500);
+    expect(Math.abs(distanceM(HOME, p) - 500)).toBeLessThanOrEqual(1);
+    expect(bearingDeg(HOME, p)).toBeGreaterThanOrEqual(89);
+    expect(bearingDeg(HOME, p)).toBeLessThanOrEqual(91);
+  });
+
+  it('les lieux simulés reçoivent des coordonnées réelles, les lieux réels sont gardés tels quels', async () => {
+    const { anchorAround } = await import('../src/engine/worldEngine');
+    const { PROFILES } = await import('../src/engine/simulator');
+    const anchored = anchorAround(HOME, PROFILES.dense.places);
+    for (const [i, c] of anchored.entries()) {
+      expect(Math.abs(distanceM(HOME, { lat: c.lat!, lon: c.lon! }) - PROFILES.dense.places[i].distanceM)).toBeLessThanOrEqual(2);
+    }
+    const real = { ...PROFILES.dense.places[0], lat: 1, lon: 2 };
+    expect(anchorAround(HOME, [real])[0]).toBe(real);
+  });
+});

@@ -11,7 +11,7 @@ import { PhoneIcon } from '../icons';
 import { Portrait, partsFor } from '../portraits';
 import { Halo, MaskReveal } from '../fx';
 import { reachableTraits, revealedTraits } from '../../engine/appearance';
-import { Chip, Eyebrow, Flex, PrimaryButton, Screen, Spacer, T } from '../kit';
+import { Chip, Eyebrow, Flex, ObjectiveContext, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Glitch, Pulse, Reveal, Typing, Waveform, WordReveal } from '../motion';
 import { color, radius } from '../theme';
 import { estimateMs, speak, stopVoice } from '../voice';
@@ -176,6 +176,8 @@ export function Interrogation({
   const world01 = flow.run.variables.WORLD_01?.value ?? '';
 
   const turn = useRef(0);
+  const answerScroll = useRef<ScrollView>(null);
+  const objective = React.useContext(ObjectiveContext);
   function say(q: string, a: string, guarded?: boolean) {
     const mine = ++turn.current;
     setCurrent({ q, a, guarded });
@@ -264,6 +266,14 @@ export function Interrogation({
           <Text style={T.mono}>{clock}</Text>
         </View>
       </View>
+      {objective && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: color.red }} />
+          <Text style={[T.mono, { color: color.inkSoft, flex: 1 }]} numberOfLines={1}>
+            {objective.toUpperCase()}
+          </Text>
+        </View>
+      )}
       {/* Tension: the player reads the person, not a score. */}
       <View style={{ height: 2, backgroundColor: color.line, marginTop: 16, borderRadius: 1, overflow: 'hidden' }}>
         <View style={{ height: 2, width: `${Math.min(100, (call.tension / limit) * 100)}%`, backgroundColor: tense || call.hungUp ? color.red : color.inkSoft }} />
@@ -273,7 +283,8 @@ export function Interrogation({
         <Waveform active={speaking} bars={40} height={56} />
       </View>
 
-      <View style={{ minHeight: 144, flexShrink: 1 }}>
+      {/* The answer takes the free space and scrolls: a long reply is never cut. */}
+      <ScrollView ref={answerScroll} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false} onContentSizeChange={() => answerScroll.current?.scrollToEnd({ animated: true })}>
         {current ? (
           <>
             {current.q ? <Text style={T.caption}>Toi — {current.q}</Text> : <Text style={T.caption}>{s.name.split(' ')[0]}</Text>}
@@ -288,9 +299,8 @@ export function Interrogation({
         ) : (
           <Text style={[T.title, T.italic, { color: color.faint }]}>« Allô ? »</Text>
         )}
-      </View>
+      </ScrollView>
 
-      <Flex />
       {call.hungUp ? (
         <Reveal>
           <Text style={[T.body, { textAlign: 'center', marginBottom: 16 }]}>

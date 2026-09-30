@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { CASE_2317 } from '../../cases/23-17';
 import { MODES, RouteStop } from '../../engine/worldEngine';
@@ -33,7 +33,7 @@ export function Boot({ flow }: { flow: Flow }) {
               <GhostButton label="Nouvelle enquête" onPress={flow.restart} />
             </>
           ) : (
-            <PrimaryButton label="Ouvrir le dossier" onPress={() => flow.go('dossier')} />
+            <PrimaryButton label="Ouvrir le dossier" onPress={() => flow.go('download')} />
           )}
         </Reveal>
       }
@@ -83,6 +83,8 @@ export function Dossier({ flow }: { flow: Flow }) {
     setPhase('playing');
     speak(voice, 'nora', () => setPhase('done'));
   };
+  // The scheduled message lands below the player: scroll to it instead of pushing it under the button.
+  const scroll = useRef<ScrollView>(null);
   return (
     <Screen
       progress={0.02}
@@ -96,6 +98,7 @@ export function Dossier({ flow }: { flow: Flow }) {
         )
       }
     >
+      <ScrollView ref={scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }} onContentSizeChange={() => phase === 'done' && scroll.current?.scrollToEnd({ animated: true })}>
       <Reveal>
         <Eyebrow red>Disparue</Eyebrow>
       </Reveal>
@@ -145,6 +148,7 @@ export function Dossier({ flow }: { flow: Flow }) {
           <Text style={T.body}>{CASE_2317.opening.scheduledMessage}</Text>
         </Reveal>
       )}
+      </ScrollView>
     </Screen>
   );
 }
@@ -178,7 +182,7 @@ const MODE_INFO: Record<RunMode, { pitch: string; detail: string }> = {
 
 export function Terrain({ flow }: { flow: Flow }) {
   const [scanning, setScanning] = useState(true);
-  const [status, setStatus] = useState<'gps' | 'simulated' | 'denied' | 'offline'>(flow.world ? 'gps' : 'simulated');
+  const [status, setStatus] = useState<'gps' | 'anchored' | 'simulated' | 'denied' | 'offline'>(flow.world ? (flow.world.places.length ? 'gps' : 'anchored') : 'simulated');
 
   // Reads the real surroundings (GPS + OpenStreetMap). Any failure falls back to the simulation:
   // the investigation never waits on a signal.
@@ -187,8 +191,9 @@ export function Terrain({ flow }: { flow: Flow }) {
     const started = Date.now();
     let next: typeof status = 'simulated';
     try {
-      flow.setWorld(await readSurroundings());
-      next = 'gps';
+      const w = await readSurroundings();
+      flow.setWorld(w);
+      next = w.places.length ? 'gps' : 'anchored';
     } catch (e) {
       next = e instanceof Error && e.message === 'permission' ? 'denied' : 'offline';
       flow.setWorld(undefined);
@@ -309,7 +314,9 @@ export function Terrain({ flow }: { flow: Flow }) {
         ) : (
           <>
             <Text style={[T.caption, { marginTop: 8 }]}>
-              {status === 'denied'
+              {status === 'anchored'
+                ? 'Carte indisponible : les lieux sont simulés, mais placés autour de toi. La boussole et la distance suivent tes pas.'
+                : status === 'denied'
                 ? 'Localisation refusée : l’enquête se joue dans un environnement simulé.'
                 : status === 'offline'
                   ? 'Carte indisponible (réseau ou GPS) : environnement simulé.'

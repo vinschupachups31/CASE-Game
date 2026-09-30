@@ -32,3 +32,8 @@ export function linkStatus(run: RunState, a: string, b: string, caseFile: CaseFi
 export function notebookLinks(run: RunState, caseFile: CaseFile = CASE_2317) {
   return run.links.map((l) => ({ ...l, ...linkStatus(run, l.a, l.b, caseFile) }));
 }
+
+/** The evening as the player knows it so far, in time order. */
+export function knownTimeline(run: RunState, caseFile: CaseFile = CASE_2317) {
+  return caseFile.clues.filter((c) => check(c.revealWhen, run)).sort((a, b) => a.time.localeCompare(b.time));
+}
