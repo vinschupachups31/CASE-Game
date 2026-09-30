@@ -379,6 +379,17 @@ export const CASE_2317: CaseFile = deepFreeze({
         'Mais : qui savait ce qu’elle avait découvert ?',
       ],
     },
+    // PROPOSITION (à valider) : clôture du chapitre II, tirée uniquement des faits canoniques.
+    {
+      number: 2,
+      title: 'Chapitre II',
+      completeWhen: { all: [{ evidence: 'e03' }, { statement: 'marc_no_sarah' }] },
+      closing: [
+        'Marc savait ce que Nora avait découvert.',
+        'Il était avec elle à 22:41.',
+        'À 23:17, son message est parti quand même.',
+      ],
+    },
   ],
 
   // ---- PROPOSITION (à valider) : personnages secondaires et fausses pistes des modes longs ----

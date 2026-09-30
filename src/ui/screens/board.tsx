@@ -7,6 +7,7 @@ import { Flow, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
 import { Eyebrow, Flex, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Reveal } from '../motion';
+import { Portrait, PortraitId } from '../portraits';
 import { color } from '../theme';
 
 // Spatial, minimal, tactile. Not a wall of red strings: a few nodes, lines that mean something.
@@ -20,7 +21,7 @@ const POSITIONS: Record<string, { x: number; y: number }> = {
 const ALL = ['nora', 'leo', 'sarah', 'marc'];
 const NODE = 72;
 
-export function Board({ flow, next }: { flow: Flow; next: Stage }) {
+export function Board({ flow, next, cta = 'Reprendre la route' }: { flow: Flow; next: Stage; cta?: string }) {
   const { width } = useWindowDimensions();
   const W = Math.min(width, 480) - 48;
   const H = 320;
@@ -48,7 +49,7 @@ export function Board({ flow, next }: { flow: Flow; next: Stage }) {
   }
 
   return (
-    <Screen progress={progressOf(flow.stage)} footer={<PrimaryButton label="Reprendre la route" disabled={flow.run.links.length === 0} onPress={() => flow.go(next)} />}>
+    <Screen progress={progressOf(flow.stage)} footer={<PrimaryButton label={cta} disabled={flow.run.links.length === 0} onPress={() => flow.go(next)} />}>
       <Reveal>
         <Eyebrow>Carnet</Eyebrow>
         <Spacer h={8} />
@@ -58,7 +59,7 @@ export function Board({ flow, next }: { flow: Flow; next: Stage }) {
         <Text style={T.caption}>Touche deux personnes pour les relier.</Text>
       </Reveal>
       <Spacer h={24} />
-      <View style={{ width: W, height: H + NODE / 2 }}>
+      <View style={{ width: W, height: H + NODE / 2 + 16 }}>
         <Svg width={W} height={H} style={{ position: 'absolute' }}>
           {flow.run.links.map((l) => {
             const a = at(l.a);
@@ -86,23 +87,13 @@ export function Board({ flow, next }: { flow: Flow; next: Stage }) {
           return (
             <Pressable
               key={id}
+              accessibilityRole="button"
+              accessibilityLabel={node?.label ?? 'Inconnu'}
               onPress={() => tap(id)}
-              style={{
-                position: 'absolute',
-                left: p.x - NODE / 2,
-                top: p.y - NODE / 2,
-                width: NODE,
-                height: NODE,
-                borderRadius: NODE / 2,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: on ? color.ink : id === 'nora' ? color.surfaceHi : color.surface,
-                borderWidth: 1,
-                borderColor: node ? (on ? color.ink : color.lineHi) : color.line,
-                borderStyle: node ? 'solid' : 'dashed',
-              }}
+              style={{ position: 'absolute', left: p.x - NODE / 2, top: p.y - NODE / 2, width: NODE, alignItems: 'center' }}
             >
-              <Text style={[T.label, { letterSpacing: 1, color: on ? color.bg : node ? color.ink : color.faint }]}>{node?.label ?? '?'}</Text>
+              <Portrait id={id as PortraitId} size={NODE} dim={!node} ring={on ? color.ink : id === 'nora' ? color.redLine : color.lineHi} />
+              <Text style={[T.label, { letterSpacing: 1, marginTop: 4, color: on ? color.ink : node ? color.inkSoft : color.faint }]}>{node?.label ?? '?'}</Text>
             </Pressable>
           );
         })}

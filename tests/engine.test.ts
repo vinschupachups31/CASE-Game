@@ -295,3 +295,55 @@ describe('Appels — psychologie', () => {
     expect(s.hungUp).toBe(false);
   });
 });
+
+describe('Chapitre II — accusation', () => {
+  const chapterTwo = () => {
+    let run = afterYear();
+    for (const e of ask(run, 'leo', 'Où étiez-vous après l’appel ?').events) run = reduceGame(run, e);
+    run = reduceGame(run, { type: 'CAPTURE', slot: 'WORLD_02', raw: 'PHARMACIE', source: 'camera' });
+    run = reduceGame(run, { type: 'SET_FLAG', flag: 'WALKING_TO_ZONE_3' });
+    run = reduceGame(run, { type: 'NEXT_CHAPTER' });
+    for (const e of ask(run, 'marc', 'Vous connaissez Sarah ?').events) run = reduceGame(run, e);
+    return run;
+  };
+
+  it('la note de Nora ouvre le chapitre II et établit la contradiction de Marc', () => {
+    const run = chapterTwo();
+    expect(run.chapter).toBe(2);
+    expect(evidenceView(run).find((e) => e.id === 'e03')?.fileName).toBe('NOTE_A.txt');
+    expect(run.contradictions).toContain('c_marc_sarah');
+  });
+
+  it('avec la note, Sarah avoue', () => {
+    const run = chapterTwo();
+    expect(ask(run, 'sarah', 'Vous lui avez donné des fichiers ?').topicId).toBe('sarah_confess');
+  });
+
+  it('la bonne personne avec la bonne preuve : accusation retenue', async () => {
+    const { accusationVerdict } = await import('../src/engine/gameEngine');
+    const run = reduceGame(chapterTwo(), { type: 'ACCUSE', suspectId: 'marc', contradictionId: 'c_marc_sarah' });
+    expect(accusationVerdict(run)?.outcome).toBe('sound');
+  });
+
+  it('la bonne personne sur une esquive ou une intuition : accusation fragile', async () => {
+    const { accusationVerdict } = await import('../src/engine/gameEngine');
+    for (const proof of ['c_marc_world01', 'intuition']) {
+      const run = reduceGame(chapterTwo(), { type: 'ACCUSE', suspectId: 'marc', contradictionId: proof });
+      expect(accusationVerdict(run)?.outcome).toBe('weak');
+    }
+  });
+
+  it('la mauvaise personne : le verdict dit ce qu’elle cachait, et l’accusation est définitive', async () => {
+    const { accusationVerdict } = await import('../src/engine/gameEngine');
+    const run = reduceGame(chapterTwo(), { type: 'ACCUSE', suspectId: 'leo', contradictionId: 'c_leo_home' });
+    const v = accusationVerdict(run)!;
+    expect(v.outcome).toBe('wrong');
+    expect(v.culprit.id).toBe('marc');
+    expect(reduceGame(run, { type: 'ACCUSE', suspectId: 'marc', contradictionId: 'c_marc_sarah' })).toBe(run);
+  });
+
+  it('Sarah, ignorée au chapitre I, commence l’appel plus froide', async () => {
+    const { startCall } = await import('../src/engine/callEngine');
+    expect(startCall('sarah', 0, true).trust).toBeLessThan(startCall('sarah').trust);
+  });
+});

@@ -2,7 +2,7 @@
 
 **Une affaire. N'importe où. Ta ville devient la scène de crime.**
 
-Vertical slice de l'affaire 001 **23:17**.
+Vertical slice de l'affaire 001 **23:17** : chapitre I (enquête terrain) et chapitre II (note de Nora, Sarah, Marc, accusation, verdict).
 
 ## Principe
 La vérité criminelle est immuable. Le World Engine adapte les lieux et certaines énigmes au monde réel du joueur.

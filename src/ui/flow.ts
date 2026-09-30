@@ -28,6 +28,16 @@ export const STAGES = [
   'ringMarc',
   'callMarc',
   'end',
+  // Chapter II: the hidden note, Sarah, Marc again, the accusation.
+  'chapter2',
+  'evidence3',
+  'ringSarah',
+  'callSarah',
+  'ringMarc2',
+  'callMarc2',
+  'board2',
+  'accuse',
+  'verdict',
 ] as const;
 
 export type Stage = (typeof STAGES)[number];
@@ -57,11 +67,32 @@ export const STAGE_NAMES: Record<Stage, string> = {
   ringMarc: 'Appel Marc',
   callMarc: 'Interrogatoire Marc',
   end: 'Fin de chapitre',
+  chapter2: 'Chapitre II',
+  evidence3: 'Note de Nora',
+  ringSarah: 'Appel Sarah',
+  callSarah: 'Interrogatoire Sarah',
+  ringMarc2: 'Rappel Marc',
+  callMarc2: 'Confrontation Marc',
+  board2: 'Carnet II',
+  accuse: 'Accusation',
+  verdict: 'Verdict',
 };
 
 export const pageLabel = (stage: Stage) => `${String(STAGES.indexOf(stage) + 1).padStart(2, '0')} · ${STAGE_NAMES[stage]}`;
 
-export const progressOf = (stage: Stage) => STAGES.indexOf(stage) / (STAGES.length - 1);
+/** First stage of each chapter; progress bars fill within a chapter. */
+const CHAPTER_STARTS: Stage[] = ['boot', 'chapter2'];
+
+export const chapterOf = (stage: Stage) => CHAPTER_STARTS.filter((s) => STAGES.indexOf(s) <= STAGES.indexOf(stage)).length;
+
+export const progressOf = (stage: Stage) => {
+  const n = chapterOf(stage);
+  const start = STAGES.indexOf(CHAPTER_STARTS[n - 1]);
+  const end = n < CHAPTER_STARTS.length ? STAGES.indexOf(CHAPTER_STARTS[n]) - 1 : STAGES.length - 1;
+  return (STAGES.indexOf(stage) - start) / (end - start);
+};
+
+export const ROMAN = ['', 'I', 'II', 'III'];
 
 export type Flow = {
   run: RunState;

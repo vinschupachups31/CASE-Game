@@ -30,10 +30,12 @@ export const INTROS: { id: IntroId; label: string; text: string }[] = [
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 const psycheOf = (id: SuspectId, caseFile: CaseFile) => caseFile.suspects.find((s) => s.id === id)!.psyche;
 
-export function startCall(suspectId: SuspectId, hangups = 0, caseFile: CaseFile = CASE_2317): CallState {
+/** `grudge`: the player snubbed them earlier (e.g. ignored a message). They remember that too. */
+export function startCall(suspectId: SuspectId, hangups = 0, grudge = false, caseFile: CaseFile = CASE_2317): CallState {
   const p = psycheOf(suspectId, caseFile);
   // Calling back after a hang-up: they remember.
-  return { suspectId, introduced: false, trust: clamp(p.trust - 15 * hangups), tension: clamp(10 + 15 * hangups), hungUp: false, hangups };
+  const cold = hangups + (grudge ? 1 : 0);
+  return { suspectId, introduced: false, trust: clamp(p.trust - 15 * cold), tension: clamp(10 + 15 * cold), hungUp: false, hangups };
 }
 
 function withEffect(state: CallState, effect: { trust: number; tension: number }, caseFile: CaseFile): CallState {

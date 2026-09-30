@@ -30,7 +30,8 @@ export type RunState = {
   flags: string[];
   messages: string[];
   links: { a: string; b: string }[];
-  accusation?: { suspectId: SuspectId; correct: boolean };
+  /** `contradictionId`: the proof the player put forward, if any. */
+  accusation?: { suspectId: SuspectId; correct: boolean; contradictionId?: string };
 };
 
 export type GameEvent =
@@ -40,4 +41,4 @@ export type GameEvent =
   | { type: 'SET_FLAG'; flag: string }
   | { type: 'LINK'; a: string; b: string }
   | { type: 'NEXT_CHAPTER' }
-  | { type: 'ACCUSE'; suspectId: SuspectId };
+  | { type: 'ACCUSE'; suspectId: SuspectId; contradictionId?: string };

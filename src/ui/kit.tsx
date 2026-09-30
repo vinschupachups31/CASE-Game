@@ -33,12 +33,15 @@ export function Eyebrow({ children, red, style }: { children: React.ReactNode; r
  * One screen = one primary action. The body scrolls-free by design; content is short.
  * `bare` removes the top bar for immersive moments (calls, the unknown number).
  */
+/** Chapter shown in the top bar, set once by the app for the current stage. */
+export const ChapterContext = React.createContext('I');
+
 export function Screen({
   children,
   footer,
   bare,
   progress,
-  chapter = 'I',
+  chapter,
   style,
 }: {
   children: React.ReactNode;
@@ -49,9 +52,10 @@ export function Screen({
   style?: StyleProp<ViewStyle>;
 }) {
   const insets = useSafeAreaInsets();
+  const current = React.useContext(ChapterContext);
   return (
     <View style={[{ flex: 1, backgroundColor: color.bg, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }, style]}>
-      {!bare && <TopBar progress={progress} chapter={chapter} />}
+      {!bare && <TopBar progress={progress} chapter={chapter ?? current} />}
       <View style={{ flex: 1, paddingHorizontal: space.gutter, overflow: 'hidden' }}>{children}</View>
       {footer && <View style={{ paddingHorizontal: space.gutter, paddingTop: 16, gap: 8 }}>{footer}</View>}
     </View>

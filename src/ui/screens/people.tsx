@@ -8,26 +8,13 @@ import { RunState } from '../../types/run';
 import { Flow, Stage, progressOf } from '../flow';
 import { haptic } from '../haptics';
 import { PhoneIcon } from '../icons';
+import { Portrait } from '../portraits';
 import { Chip, Eyebrow, Flex, PrimaryButton, Screen, Spacer, T } from '../kit';
 import { Glitch, Pulse, Reveal, Typing, Waveform, WordReveal } from '../motion';
 import { color, radius } from '../theme';
 import { estimateMs, speak, stopVoice } from '../voice';
 
 const suspectOf = (id: SuspectId) => CASE_2317.suspects.find((s) => s.id === id)!;
-const initials = (name: string) =>
-  name
-    .split(' ')
-    .map((p) => p[0])
-    .join('');
-
-function Avatar({ name, size = 96, tint = color.surfaceHi }: { name: string; size?: number; tint?: string }) {
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: tint, borderWidth: 1, borderColor: color.lineHi, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={[size > 56 ? T.title : T.bodyStrong, { color: color.ink }]}>{initials(name)}</Text>
-    </View>
-  );
-}
-
 // ---------- Ring: outgoing (the player calls) or incoming (they call the player). ----------
 
 export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectId: SuspectId; incoming?: boolean; next: Stage }) {
@@ -54,7 +41,7 @@ export function Ring({ flow, suspectId, incoming, next }: { flow: Flow; suspectI
       <View style={{ alignItems: 'center' }}>
         <View style={{ width: 240, height: 240, alignItems: 'center', justifyContent: 'center' }}>
           <Pulse size={240} tint={incoming ? color.red : color.ink} period={1800} />
-          <Avatar name={s.name} />
+          <Portrait id={s.id} size={128} />
         </View>
         <Spacer h={24} />
         <Text style={[T.display, { textAlign: 'center' }]}>{s.name.split(' ')[0]}</Text>
@@ -107,7 +94,7 @@ function RoundButton({ tint, label, onPress, down }: { tint: string; label: stri
 
 // ---------- Interrogation: introduce yourself, read the person, adapt your tone. ----------
 
-type Question = { text: string; tone: Tone };
+export type Question = { text: string; tone: Tone };
 
 const QUESTIONS: Record<SuspectId, Question[]> = {
   leo: [
@@ -119,6 +106,8 @@ const QUESTIONS: Record<SuspectId, Question[]> = {
   sarah: [
     { text: 'Sur quoi Nora enquêtait-elle ?', tone: 'neutral' },
     { text: 'Pourquoi Léo mentirait ?', tone: 'empathy' },
+    { text: 'Vous connaissez Marc Delcourt ?', tone: 'neutral' },
+    { text: 'Vous lui avez donné des fichiers. Pourquoi le cacher ?', tone: 'pressure' },
   ],
   marc: [
     { text: 'Où étiez-vous à 22:41 ?', tone: 'neutral' },
@@ -143,9 +132,15 @@ export function Interrogation({
   hint,
   next,
   opening,
+  grudge,
+  questions = [],
 }: {
   flow: Flow;
   suspectId: SuspectId;
+  /** They start colder: the player snubbed them earlier. */
+  grudge?: boolean;
+  /** Questions that only make sense at this point of the story. */
+  questions?: Question[];
   canHangUp: (run: RunState) => boolean;
   hint: string;
   next: Stage;
@@ -153,7 +148,7 @@ export function Interrogation({
   opening: string;
 }) {
   const s = suspectOf(suspectId);
-  const [call, setCall] = useState<CallState>(() => startCall(suspectId));
+  const [call, setCall] = useState<CallState>(() => startCall(suspectId, 0, grudge));
   const [tab, setTab] = useState<'intro' | 'questions' | 'evidence'>('intro');
   const [asked, setAsked] = useState<string[]>([]);
   const [current, setCurrent] = useState<{ q: string; a: string; guarded?: boolean }>();
@@ -203,7 +198,7 @@ export function Interrogation({
   }
 
   function callBack() {
-    const fresh = startCall(suspectId, call.hangups);
+    const fresh = startCall(suspectId, call.hangups, grudge);
     setCall(fresh);
     setTab('intro');
     say('', suspectOf(suspectId).psyche.lines.suspicious);
@@ -231,7 +226,7 @@ export function Interrogation({
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Avatar name={s.name} size={48} />
+        <Portrait id={s.id} size={48} ring={call.hungUp ? color.red : color.lineHi} />
         <View style={{ flex: 1 }}>
           <Text style={T.bodyStrong}>{s.name}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -295,7 +290,7 @@ export function Interrogation({
             {tab === 'intro'
               ? INTROS.map((i) => <Chip key={i.id} label={i.label} icon="↳" onPress={() => present(i)} />)
               : tab === 'questions'
-                ? QUESTIONS[suspectId].map((q) => {
+                ? [...QUESTIONS[suspectId], ...questions].map((q) => {
                     const text = q.text.replace('{WORLD_01}', world01);
                     return <Chip key={q.text} label={text} icon={asked.includes(text) ? '✓' : TONE_TAG[q.tone]} onPress={() => put(text, text, q.tone)} />;
                   })
@@ -417,7 +412,7 @@ export function SarahMessages({ flow, next }: { flow: Flow; next: Stage }) {
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <Avatar name="Sarah Klein" size={48} />
+        <Portrait id="sarah" size={48} />
         <View>
           <Text style={T.bodyStrong}>Sarah Klein</Text>
           <Text style={T.caption}>Collègue de Nora · en ligne</Text>
@@ -484,6 +479,8 @@ export function Threat({ flow, next }: { flow: Flow; next: Stage }) {
     <Screen bare style={{ backgroundColor: color.black }}>
       {started && (
         <View style={{ alignItems: 'center', marginTop: 32 }}>
+          <Portrait id="unknown" size={64} ring={color.redLine} />
+          <Spacer h={16} />
           <Glitch style={[T.label, { color: color.red, letterSpacing: 4 }]}>NUMÉRO INCONNU</Glitch>
           <Text style={[T.mono, { marginTop: 8 }]}>+33 · · · · · · · · ·</Text>
         </View>

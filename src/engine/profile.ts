@@ -28,6 +28,17 @@ export function shareText(run: RunState, caseFile: CaseFile = CASE_2317): string
   ].join('\n');
 }
 
+/** End-of-case share: says whether the player solved it, never who did it (no spoilers). */
+export function verdictShareText(run: RunState, caseFile: CaseFile = CASE_2317): string {
+  const solved = !!run.accusation?.correct;
+  return [
+    `CASE · Affaire ${caseFile.title} — ${solved ? 'résolue' : 'non résolue'}`,
+    `Ma ville a écrit : ${adaptiveCode(run, caseFile)}`,
+    solved ? 'J’ai trouvé qui mentait.' : 'J’ai accusé la mauvaise personne.',
+    'Et toi, qui accuserais-tu ?',
+  ].join('\n');
+}
+
 /** Next chapter unlocks at the case's opening time — a daily appointment. */
 export function nextUnlock(now: Date, time = CASE_2317.opening.time): Date {
   const [h, m] = time.split(':').map(Number);

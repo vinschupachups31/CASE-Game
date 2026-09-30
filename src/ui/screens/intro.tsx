@@ -4,6 +4,7 @@ import { CASE_2317 } from '../../cases/23-17';
 import { MODES, RouteStop } from '../../engine/worldEngine';
 import { modeScope } from '../../engine/modes';
 import { RunMode } from '../../types/run';
+import { Portrait } from '../portraits';
 import { Flow } from '../flow';
 import { haptic } from '../haptics';
 import { PlayIcon, ShieldIcon } from '../icons';
@@ -84,10 +85,13 @@ export function Dossier({ flow }: { flow: Flow }) {
       </Reveal>
       <Spacer h={16} />
       <Reveal delay={120}>
-        <Text style={T.display}>
-          Nora{'\n'}
-          <Text style={T.italic}>Valen.</Text>
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={T.display}>
+            Nora{'\n'}
+            <Text style={T.italic}>Valen.</Text>
+          </Text>
+          <Portrait id="nora" size={104} ring={color.redLine} />
+        </View>
       </Reveal>
       <Spacer h={16} />
       <Reveal delay={240}>

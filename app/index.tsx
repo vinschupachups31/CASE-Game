@@ -10,9 +10,9 @@ import { CASE_2317 } from '../src/cases/23-17';
 import { createRun, isChapterComplete, reduceGame } from '../src/engine/gameEngine';
 import { PROFILES, Profile, simulate } from '../src/engine/simulator';
 import { GameEvent, RunMode, RunState } from '../src/types/run';
-import { Flow, Stage, pageLabel } from '../src/ui/flow';
+import { Flow, ROMAN, Stage, chapterOf, pageLabel } from '../src/ui/flow';
 import { haptic } from '../src/ui/haptics';
-import { T, Toast, ToastKind } from '../src/ui/kit';
+import { ChapterContext, T, Toast, ToastKind } from '../src/ui/kit';
 import { Pressable, Text } from 'react-native';
 import { isVoiceOn, onVoiceChange, setVoiceOn } from '../src/ui/voice';
 import { color, motion } from '../src/ui/theme';
@@ -21,6 +21,8 @@ import { ChapterEnd } from '../src/ui/screens/end';
 import { Arrived, Brief, Detect, Evidence, Navigate, Pocket, Viewfinder } from '../src/ui/screens/field';
 import { Boot, Dossier, Terrain } from '../src/ui/screens/intro';
 import { Interrogation, Ring, SarahMessages, Threat, Walk } from '../src/ui/screens/people';
+import { Accuse, Verdict } from '../src/ui/screens/verdict';
+import { CALL_OPENINGS } from '../src/voice/lines';
 
 const PROFILE_ORDER: Profile['id'][] = ['dense', 'small', 'rural'];
 
@@ -100,7 +102,9 @@ export default function App() {
       <StatusBar style="light" />
       <View style={{ flex: 1, backgroundColor: color.black, alignItems: 'center' }}>
         <Animated.View style={{ flex: 1, width: '100%', maxWidth: 480, opacity: fade }}>
-          <StageView flow={flow} />
+          <ChapterContext.Provider value={ROMAN[chapterOf(stage)]}>
+            <StageView flow={flow} />
+          </ChapterContext.Provider>
         </Animated.View>
         {/* Page marker for playtests ("03 · Terrain") and the voice switch. */}
         <View pointerEvents="box-none" style={{ position: 'absolute', bottom: 0, width: '100%', maxWidth: 480, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24 }}>
@@ -161,7 +165,7 @@ function StageView({ flow }: { flow: Flow }) {
         <Interrogation
           flow={flow}
           suspectId="leo"
-          opening="Allô ? … Qui êtes-vous ? Comment vous avez eu ce numéro ?"
+          opening={CALL_OPENINGS.leo}
           canHangUp={(r) => r.messages.includes('sarah_01')}
           hint="Demande-lui où il était après l’appel."
           next="sarah"
@@ -201,7 +205,7 @@ function StageView({ flow }: { flow: Flow }) {
         <Interrogation
           flow={flow}
           suspectId="marc"
-          opening={CASE_2317.messages.find((m) => m.id === 'marc_01')!.lines.join(' ')}
+          opening={CALL_OPENINGS.marc}
           canHangUp={(r) => isChapterComplete(r) && r.statements.some((s) => s.suspectId === 'marc')}
           hint="Demande-lui comment il connaît ce chiffre."
           next="end"
@@ -209,6 +213,57 @@ function StageView({ flow }: { flow: Flow }) {
       );
     case 'end':
       return <ChapterEnd flow={flow} />;
+    case 'chapter2':
+      return (
+        <Brief
+          flow={flow}
+          eyebrow="Chapitre II · 07:42"
+          number="04"
+          title="Ce que Nora"
+          italic="savait."
+          text="Cette nuit, un fichier de Nora a refait surface. Il était rangé sous le nom de ta ville."
+          cta="Ouvrir le fichier"
+          next="evidence3"
+        />
+      );
+    case 'evidence3':
+      return <Evidence flow={flow} id="e03" cta="Appeler Sarah" next="ringSarah" />;
+    case 'ringSarah':
+      return <Ring flow={flow} suspectId="sarah" next="callSarah" />;
+    case 'callSarah': {
+      // Sarah remembers whether the player answered her message.
+      const ignored = flow.run.flags.includes('SARAH_IGNORED');
+      return (
+        <Interrogation
+          flow={flow}
+          suspectId="sarah"
+          grudge={ignored}
+          opening={ignored ? CALL_OPENINGS.sarah_ignored : CALL_OPENINGS.sarah}
+          canHangUp={(r) => r.flags.includes('SARAH_CONFESSED')}
+          hint="Présente-lui la note de Nora."
+          next="ringMarc2"
+        />
+      );
+    }
+    case 'ringMarc2':
+      return <Ring flow={flow} suspectId="marc" next="callMarc2" />;
+    case 'callMarc2':
+      return (
+        <Interrogation
+          flow={flow}
+          suspectId="marc"
+          opening={CALL_OPENINGS.marc_again}
+          canHangUp={(r) => r.contradictions.includes('c_marc_sarah')}
+          hint="Demande-lui s’il connaît Sarah."
+          next="board2"
+        />
+      );
+    case 'board2':
+      return <Board flow={flow} cta="Passer à l’accusation" next="accuse" />;
+    case 'accuse':
+      return <Accuse flow={flow} next="verdict" />;
+    case 'verdict':
+      return <Verdict flow={flow} />;
   }
 }
 

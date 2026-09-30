@@ -8,10 +8,14 @@ import { SuspectId } from '../types/case';
 export type Speaker = 'nora' | SuspectId;
 export type VoiceLine = { id: string; speaker: Speaker; text: string; direction: string };
 
-export const CALL_OPENINGS: Record<'leo' | 'marc', string> = {
+export const CALL_OPENINGS = {
   leo: 'Allô ? … Qui êtes-vous ? Comment vous avez eu ce numéro ?',
   marc: CASE_2317.messages.find((m) => m.id === 'marc_01')!.lines.join(' '),
-};
+  // Chapter II. Sarah remembers whether the player answered her message.
+  sarah: 'C’est vous. Je me doutais que vous rappelleriez.',
+  sarah_ignored: 'Maintenant vous m’appelez ? Vous ne m’avez pas répondu, l’autre soir.',
+  marc_again: 'Encore vous. J’espère que vous avez avancé sur Léo.',
+} as const;
 
 /** Acting notes, sent with the text when the voices are generated. */
 export const CASTING: Record<Speaker, string> = {
@@ -25,6 +29,9 @@ const ALL_LINES: VoiceLine[] = [
   { id: 'nora_message', speaker: 'nora', text: CASE_2317.opening.audio.join(' '), direction: CASTING.nora },
   { id: 'leo_opening', speaker: 'leo', text: CALL_OPENINGS.leo, direction: CASTING.leo },
   { id: 'marc_opening', speaker: 'marc', text: CALL_OPENINGS.marc, direction: CASTING.marc },
+  { id: 'sarah_opening', speaker: 'sarah', text: CALL_OPENINGS.sarah, direction: CASTING.sarah },
+  { id: 'sarah_opening_ignored', speaker: 'sarah', text: CALL_OPENINGS.sarah_ignored, direction: CASTING.sarah },
+  { id: 'marc_opening_again', speaker: 'marc', text: CALL_OPENINGS.marc_again, direction: CASTING.marc },
   ...(Object.keys(CASE_2317.topics) as SuspectId[]).flatMap((s) =>
     CASE_2317.topics[s].map((t) => ({ id: t.id, speaker: s as Speaker, text: t.answer, direction: CASTING[s] })),
   ),

@@ -95,16 +95,21 @@ export function reduceGame(run: RunState, event: GameEvent, caseFile: CaseFile =
     }
     case 'ACCUSE': {
       if (run.accusation) return run;
-      return { ...ticked, accusation: { suspectId: event.suspectId, correct: isAccusationSound(run, event.suspectId, caseFile) } };
+      const correct = isAccusationSound(run, event.suspectId, caseFile, event.contradictionId);
+      return { ...ticked, accusation: { suspectId: event.suspectId, correct, ...(event.contradictionId && { contradictionId: event.contradictionId }) } };
     }
   }
 }
 
-/** Rule 7: an accusation needs the right suspect AND the evidence AND the proven contradiction. */
-export function isAccusationSound(run: RunState, suspectId: SuspectId, caseFile: CaseFile = CASE_2317): boolean {
+/**
+ * Rule 7: an accusation needs the right suspect AND the evidence AND the proven contradiction.
+ * When the player names their proof, it must be one of the proven contradictions: a dodge is not a proof.
+ */
+export function isAccusationSound(run: RunState, suspectId: SuspectId, caseFile: CaseFile = CASE_2317, contradictionId?: string): boolean {
   const { requiredEvidence, requiredContradictions } = caseFile.accusation;
   return (
     suspectId === caseFile.truth.culprit &&
+    (contradictionId === undefined || requiredContradictions.includes(contradictionId)) &&
     requiredEvidence.every((id) => run.evidence.includes(id)) &&
     requiredContradictions.every((id) => run.contradictions.includes(id))
   );
@@ -142,6 +147,20 @@ export function contradictionView(run: RunState, caseFile: CaseFile = CASE_2317)
   return caseFile.contradictions
     .filter((c) => run.contradictions.includes(c.id))
     .map((c) => ({ id: c.id, suspectId: c.suspectId, level: c.level, label: render(c.label, run, caseFile) }));
+}
+
+/** Why an accusation holds or fails, for the verdict screen. Never reveals more than the Case File says. */
+export function accusationVerdict(run: RunState, caseFile: CaseFile = CASE_2317) {
+  const a = run.accusation;
+  if (!a) return undefined;
+  const outcome: 'sound' | 'weak' | 'wrong' = a.correct ? 'sound' : a.suspectId === caseFile.truth.culprit ? 'weak' : 'wrong';
+  return {
+    outcome,
+    accused: caseFile.suspects.find((s) => s.id === a.suspectId)!,
+    culprit: caseFile.suspects.find((s) => s.id === caseFile.truth.culprit)!,
+    facts: caseFile.truth.facts,
+    timeline: caseFile.timeline,
+  };
 }
 
 export function chapterSummary(run: RunState, caseFile: CaseFile = CASE_2317) {

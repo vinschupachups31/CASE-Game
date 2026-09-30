@@ -130,6 +130,14 @@ export function ChapterEnd({ flow }: { flow: Flow }) {
           </Text>
           <Text style={T.caption}>Le prochain dossier arrive à 07:42. Garde ton téléphone près de toi.</Text>
         </View>
+        {/* Playtests cannot wait for 07:42. */}
+        <GhostButton
+          label="Ouvrir le chapitre II maintenant"
+          onPress={() => {
+            flow.apply({ type: 'NEXT_CHAPTER' });
+            flow.go('chapter2');
+          }}
+        />
         <GhostButton label="Rejouer dans une autre ville" onPress={flow.restart} />
       </ScrollView>
     </Screen>

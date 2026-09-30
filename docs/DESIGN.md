@@ -16,8 +16,12 @@ Référence : skill `.claude/skills/mobile-app-ui-design` (règles 60/30/10, gri
 - Le carnet est spatial : 4 nœuds, trait plein = fait établi, pointillé rouge = hypothèse.
 - Retours immédiats : notifications en haut d’écran (« Déclaration enregistrée », « Contradiction potentielle ») avec vibrations dédiées.
 
+## Portraits (`src/ui/portraits.tsx`)
+Silhouettes sans visage, éclairées par la gauche comme une photo de dossier. Chaque personnage se lit à un seul trait : l’écharpe rouge de Nora, la capuche de Léo, les lunettes et le chignon de Sarah, le costume et la cravate de Marc, un « ? » rouge pour le numéro inconnu. Le joueur imagine le visage ; la voix fait le reste.
+
 ## Moments clés
 - **Pic** : le numéro inconnu. Écran noir, vibration, léger glitch, la valeur trouvée par le joueur soulignée en rouge, puis « Tu as trouvé 1927 il y a 6 min. » et l’appel de Marc qui suit sans transition.
+- **Verdict** (chapitre II) : le joueur choisit une personne **et** une preuve. Bonne personne + contradiction établie = accusation retenue ; bonne personne sur une esquive ou une intuition = accusation fragile ; mauvaise personne = on révèle ce qu’elle cachait. La vérité (chronologie 21:53 · 22:41 · 23:17) est révélée dans tous les cas, et le vote scellé du chapitre I est dévoilé.
 - **Fin** : carte « Ta ville a écrit 1927-A » avec le profil d’enquêteur, compteurs animés, phrase de clôture, vote scellé et compte à rebours vers le chapitre II.
 
 ## Rétention et partage

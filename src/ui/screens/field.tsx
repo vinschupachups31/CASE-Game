@@ -38,8 +38,11 @@ export function Brief({
   quote,
   cta,
   next,
+  eyebrow,
 }: {
   flow: Flow;
+  /** Replaces "Mission 0X" (e.g. a chapter opening). */
+  eyebrow?: string;
   number: string;
   title: string;
   italic: string;
@@ -52,7 +55,7 @@ export function Brief({
     <Screen progress={progressFor(flow)} footer={<PrimaryButton label={cta} onPress={() => flow.go(next)} />}>
       <Flex />
       <Reveal>
-        <Eyebrow>Mission {number}</Eyebrow>
+        <Eyebrow>{eyebrow ?? `Mission ${number}`}</Eyebrow>
       </Reveal>
       <Spacer h={16} />
       <Reveal delay={120}>
@@ -399,21 +402,30 @@ export function Detect({ flow, next, back }: { flow: Flow; next: Stage; back: St
 
 // ---------- Evidence: a file opens, line by line. ----------
 
-const HIGHLIGHT = /(LÉO VASSEUR|MARC DELCOURT)/;
+const HIGHLIGHT = /(LÉO VASSEUR|MARC DELCOURT|M\.D\.)/;
+
+/** Which trace of the player's world each file carries (raw = the word itself, not its letter). */
+const TRACE: Record<string, { slot: WorldSlotKey; raw?: boolean }> = {
+  e01: { slot: 'WORLD_01' },
+  e02: { slot: 'WORLD_02', raw: true },
+  e03: { slot: 'WORLD_02' },
+};
 
 export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta: string; next: Stage }) {
   const file = evidenceView(flow.run).find((e) => e.id === id);
   const isMarc = id === 'e02';
-  const variable = flow.run.variables[isMarc ? 'WORLD_02' : 'WORLD_01'];
+  const dramatic = id !== 'e01';
+  const trace = TRACE[id];
+  const variable = trace && flow.run.variables[trace.slot];
   useEffect(() => {
-    const t = setTimeout(isMarc ? haptic.warning : haptic.press, isMarc ? 2600 : 400);
+    const t = setTimeout(dramatic ? haptic.warning : haptic.press, dramatic ? 2600 : 400);
     return () => clearTimeout(t);
   }, []);
   if (!file) return null;
   const n = CASE_2317.evidence.findIndex((e) => e.id === id) + 1;
 
   return (
-    <Screen progress={progressFor(flow)} footer={<Reveal delay={isMarc ? 3000 : 1600}><PrimaryButton label={cta} onPress={() => flow.go(next)} /></Reveal>}>
+    <Screen progress={progressFor(flow)} footer={<Reveal delay={dramatic ? 3000 : 1600}><PrimaryButton label={cta} onPress={() => flow.go(next)} /></Reveal>}>
       <Reveal>
         <Eyebrow>Preuve 0{n} · débloquée</Eyebrow>
       </Reveal>
@@ -446,7 +458,7 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', borderRadius: radius.pill, borderWidth: 1, borderColor: color.lineHi, paddingVertical: 8, paddingHorizontal: 16 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color.red }} />
             <Text style={[T.mono, { color: color.ink }]}>
-              {variable.source === 'fallback' ? 'SIGNAL RECONSTITUÉ' : `${isMarc ? variable.raw : variable.value} · TROUVÉ PAR TOI`}
+              {variable.source === 'fallback' ? 'SIGNAL RECONSTITUÉ' : `${trace.raw ? variable.raw : variable.value} · TROUVÉ PAR TOI`}
             </Text>
           </View>
         </Reveal>
@@ -460,6 +472,15 @@ export function Evidence({ flow, id, cta, next }: { flow: Flow; id: string; cta:
             Marc <Text style={T.italic}>Delcourt.</Text>
           </Text>
           <Text style={T.body}>La source de Nora. Il dit vouloir aider.</Text>
+        </Reveal>
+      ) : id === 'e03' ? (
+        <Reveal delay={2400}>
+          <Eyebrow red>M.D.</Eyebrow>
+          <Spacer h={8} />
+          <Text style={T.title}>
+            Marc savait que <Text style={T.italic}>Sarah</Text> avait aidé Nora.
+          </Text>
+          <Text style={T.body}>Qui le lui avait dit ?</Text>
         </Reveal>
       ) : (
         <Reveal delay={1400}>
